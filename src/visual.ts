@@ -325,9 +325,9 @@ export class Visual implements IVisual {
     const locColor = d3.scaleOrdinal<string, string>().domain(locations).range(s.palette);
 
     const isTop = s.lgPosition.startsWith("Top");
-    const legendH = s.lgShow ? (isTop ? 36 : 0) : 0;
-    const bottomLegendH = s.lgShow ? (!isTop ? 40 : 0) : 0;
-    const margin = { top: 80 + legendH, right: 30, bottom: 80 + bottomLegendH, left: 80 };
+    const legendH = s.lgShow ? (isTop ? 24 : 0) : 0;
+    const bottomLegendH = s.lgShow ? (!isTop ? 22 : 0) : 0;
+    const margin = { top: 32 + legendH, right: 30, bottom: 44 + bottomLegendH, left: 80 };
     const chartW = width - margin.left - margin.right;
     const chartH = height - margin.top - margin.bottom;
     if (chartW < 60 || chartH < 60) return;
@@ -359,7 +359,10 @@ export class Visual implements IVisual {
           .style("font-weight", "600").style("fill", s.xFontColor).text(grp);
       }
       if (s.xTitle) {
-        g.append("text").attr("x", chartW / 2).attr("y", chartH + 62)
+        // When bottom legend: place title between year/group labels (chartH+30)
+        // When top legend: place title below group labels (chartH+62)
+        const titleY = !isTop && s.lgShow ? chartH + 30 : chartH + 62;
+        g.append("text").attr("x", chartW / 2).attr("y", titleY)
           .attr("text-anchor", "middle").style("font-size", `${s.xFontSize + 1}px`)
           .style("fill", s.xFontColor).text(s.xTitle);
       }
@@ -565,8 +568,10 @@ export class Visual implements IVisual {
     const s = this.s;
     const isTop = s.lgPosition.startsWith("Top");
 
-    // Y position: top = above chart area (between title and plot), bottom = below chart area
-    const yPos = isTop ? -20 : chartH + 28;
+    // Fluent Design spacing:
+    // Top: legend sits in the margin area, ~8px below Power BI title
+    // Bottom: legend sits below X-axis category labels (chartH+44), no overlap
+    const yPos = isTop ? -18 : chartH + 46;
 
     const legendG = g.append("g").attr("class", "legend")
       .attr("transform", `translate(0, ${yPos})`);
