@@ -27,7 +27,7 @@ interface VisualSettings {
   dlFontSize: number; dlMinHeight: number; dlValueFormat: string;
   gaShow: boolean; gaLineColor: string; gaLabelColor: string; gaDotColor: string;
   gaFontSize: number; gaLineStyle: string; gaLineGap: number; gaShowDots: boolean;
-  lgShow: boolean; lgFontSize: number; lgPosition: string;
+  lgShow: boolean; lgFontSize: number; lgPosition: string; lgTitle: string;
   yearOrder: string; stackOrder: string;
   palette: string[];
 }
@@ -55,7 +55,7 @@ const DEFAULTS: VisualSettings = {
   dlFontSize: 10, dlMinHeight: 18, dlValueFormat: "full",
   gaShow: true, gaLineColor: "#E8800A", gaLabelColor: "#E8800A", gaDotColor: "#E8800A",
   gaFontSize: 14, gaLineStyle: "dashed", gaLineGap: 28, gaShowDots: true,
-  lgShow: true, lgFontSize: 11, lgPosition: "top",
+  lgShow: true, lgFontSize: 11, lgPosition: "TopLeft", lgTitle: "",
   yearOrder: "asc", stackOrder: "data",
   palette: [
     "#E05252", "#F0C230", "#4DB856", "#98D960",
@@ -143,7 +143,7 @@ export class Visual implements IVisual {
     }];
     if (obj === "legend") return [{
       objectName: "legend", selector: undefined,
-      properties: { show: s.lgShow, fontSize: s.lgFontSize, position: s.lgPosition }
+      properties: { show: s.lgShow, fontSize: s.lgFontSize, position: s.lgPosition, title: s.lgTitle }
     }];
     if (obj === "sortSettings") return [{
       objectName: "sortSettings", selector: undefined,
@@ -228,6 +228,7 @@ export class Visual implements IVisual {
       if (lg["show"] !== undefined) this.s.lgShow = lg["show"] as boolean;
       if (lg["fontSize"] !== undefined) this.s.lgFontSize = lg["fontSize"] as number;
       if (typeof lg["position"] === "string") this.s.lgPosition = lg["position"];
+      if (typeof lg["title"] === "string") this.s.lgTitle = lg["title"];
     }
 
     const so = r("sortSettings");
@@ -323,8 +324,9 @@ export class Visual implements IVisual {
 
     const locColor = d3.scaleOrdinal<string, string>().domain(locations).range(s.palette);
 
-    const legendH = s.lgShow ? (s.lgPosition === "top" ? 40 : 0) : 0;
-    const bottomLegendH = s.lgShow ? (s.lgPosition === "bottom" ? 44 : 0) : 0;
+    const isTop = s.lgPosition.startsWith("Top");
+    const legendH = s.lgShow ? (isTop ? 36 : 0) : 0;
+    const bottomLegendH = s.lgShow ? (!isTop ? 40 : 0) : 0;
     const margin = { top: 80 + legendH, right: 30, bottom: 80 + bottomLegendH, left: 80 };
     const chartW = width - margin.left - margin.right;
     const chartH = height - margin.top - margin.bottom;
@@ -551,7 +553,7 @@ export class Visual implements IVisual {
   }
 
   /* ================================================================ */
-  /*  drawLegend — improved spacing                                    */
+  /*  drawLegend — native Power BI style                                */
   /* ================================================================ */
 
   private drawLegend(
@@ -561,16 +563,18 @@ export class Visual implements IVisual {
     chartW: number, chartH: number
   ): void {
     const s = this.s;
-    const isTop = s.lgPosition === "top";
-    const yPos = isTop ? -26 : chartH + 32;
+    const isTop = s.lgPosition.startsWith("Top");
+
+    // Y position: top = above chart area (between title and plot), bottom = below chart area
+    const yPos = isTop ? -20 : chartH + 28;
 
     const legendG = g.append("g").attr("class", "legend")
       .attr("transform", `translate(0, ${yPos})`);
 
-    // Dynamic item width based on text length
+    // Measure text widths
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    const baseItemW = 24;  // rect + gap
+    const baseItemW = 26;  // circle diameter + gap
     let maxTextW = 0;
     if (ctx) {
       ctx.font = `${s.lgFontSize}px "Segoe UI", sans-serif`;
@@ -579,20 +583,44 @@ export class Visual implements IVisual {
         if (tw > maxTextW) maxTextW = tw;
       }
     }
-    const itemW = baseItemW + maxTextW + 16;  // rect + gap + text + padding
-    const totalW = locations.length * itemW;
-    const startX = Math.max(0, (chartW - totalW) / 2);
+    const itemW = baseItemW + maxTextW + 16;
 
+    // Title width if present
+    const titleW = s.lgTitle ? (ctx ? ctx.measureText(s.lgTitle).width + 12 : 60) : 0;
+    const totalW = locations.length * itemW + titleW;
+
+    // Horizontal alignment based on position suffix
+    let startX = 0;
+    if (s.lgPosition.endsWith("Center")) {
+      startX = Math.max(0, (chartW - totalW) / 2);
+    } else if (s.lgPosition.endsWith("Right")) {
+      startX = Math.max(0, chartW - totalW);
+    }
+
+    // Draw title if provided
+    let offsetX = startX;
+    if (s.lgTitle) {
+      legendG.append("text")
+        .attr("x", offsetX).attr("y", 10)
+        .style("font-size", `${s.lgFontSize}px`)
+        .style("font-weight", "600")
+        .text(s.lgTitle);
+      offsetX += titleW;
+    }
+
+    // Draw legend items with circular markers
     const items = legendG.selectAll(".legend-item")
       .data(locations).enter().append("g").attr("class", "legend-item")
-      .attr("transform", (_, i) => `translate(${startX + i * itemW}, 0)`);
+      .attr("transform", (_, i) => `translate(${offsetX + i * itemW}, 0)`);
 
-    items.append("rect")
-      .attr("width", 16).attr("height", 16).attr("rx", 3)
+    // Circular marker
+    items.append("circle")
+      .attr("cx", 6).attr("cy", 7).attr("r", 5)
       .attr("fill", d => colorScale(d));
 
+    // Label text
     items.append("text")
-      .attr("x", 22).attr("y", 12)
+      .attr("x", 16).attr("y", 11)
       .style("font-size", `${s.lgFontSize}px`)
       .text(d => d);
   }

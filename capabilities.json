@@ -213,10 +213,18 @@
           "displayName": "Position",
           "type": {
             "enumeration": [
-              { "value": "top", "displayName": "Top" },
-              { "value": "bottom", "displayName": "Bottom" }
+              { "value": "TopLeft", "displayName": "Top Left" },
+              { "value": "TopCenter", "displayName": "Top Center" },
+              { "value": "TopRight", "displayName": "Top Right" },
+              { "value": "BottomLeft", "displayName": "Bottom Left" },
+              { "value": "BottomCenter", "displayName": "Bottom Center" },
+              { "value": "BottomRight", "displayName": "Bottom Right" }
             ]
           }
+        },
+        "title": {
+          "displayName": "Title",
+          "type": { "text": true }
         }
       }
     },
