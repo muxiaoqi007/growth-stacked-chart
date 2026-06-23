@@ -1,0 +1,24 @@
+{
+  "visual": {
+    "name": "GrowthStackedChart",
+    "displayName": "Growth Stacked Chart",
+    "guid": "growthStackedChart1A2B3C4D5E",
+    "visualClassName": "Visual",
+    "version": "1.0.5.0",
+    "description": "Grouped stacked bar chart with segment percentage/value labels, growth rate annotations and connecting lines. Ideal for year-over-year comparison across categories.",
+    "supportUrl": "https://github.com/powerbi-visuals",
+    "gitHubUrl": ""
+  },
+  "apiVersion": "5.9.0",
+  "author": {
+    "name": "QoderWork",
+    "email": "dev@example.com"
+  },
+  "assets": {
+    "icon": "assets/icon.png"
+  },
+  "style": "style/visual.less",
+  "capabilities": "capabilities.json",
+  "dependencies": null,
+  "stringResources": []
+}

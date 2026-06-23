@@ -1,0 +1,105 @@
+.growthStackedChart {
+  width: 100%;
+  height: 100%;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .axis {
+    font-size: 11px;
+    color: #666;
+
+    path,
+    line {
+      fill: none;
+      stroke: #ccc;
+      shape-rendering: crispEdges;
+    }
+
+    text {
+      fill: #666;
+    }
+  }
+
+  .axis-label {
+    font-size: 13px;
+    font-weight: 600;
+    fill: #333;
+  }
+
+  .grid-line {
+    stroke: #e8e8e8;
+    stroke-dasharray: 3, 3;
+    stroke-width: 1;
+  }
+
+  .bar-rect {
+    stroke: #fff;
+    stroke-width: 1;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+
+    &:hover {
+      opacity: 0.85;
+      stroke: #333;
+      stroke-width: 1.5;
+    }
+  }
+
+  .segment-label {
+    font-size: 10px;
+    fill: #fff;
+    text-anchor: middle;
+    pointer-events: none;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  .segment-label-dark {
+    fill: #333;
+    text-shadow: none;
+  }
+
+  .total-label {
+    font-size: 12px;
+    font-weight: 700;
+    fill: #333;
+    text-anchor: middle;
+  }
+
+  .growth-label {
+    font-size: 14px;
+    font-weight: 700;
+    text-anchor: middle;
+  }
+
+  .growth-line {
+    stroke-width: 2;
+    stroke-dasharray: 4, 3;
+    fill: none;
+  }
+
+  .year-label {
+    font-size: 11px;
+    fill: #555;
+    text-anchor: middle;
+    font-weight: 600;
+  }
+
+  .legend-item {
+    cursor: pointer;
+
+    text {
+      font-size: 11px;
+      fill: #555;
+    }
+
+    rect {
+      rx: 2;
+      ry: 2;
+    }
+  }
+}

@@ -1,0 +1,265 @@
+{
+  "dataRoles": [
+    {
+      "displayName": "Category",
+      "displayNameKey": "group",
+      "name": "group",
+      "kind": "Grouping",
+      "description": "Primary category shown on X-axis (e.g., region, product line, department)"
+    },
+    {
+      "displayName": "Sub-Category",
+      "displayNameKey": "year",
+      "name": "year",
+      "kind": "Grouping",
+      "description": "Secondary category compared side-by-side within each group (e.g., year, quarter, scenario)"
+    },
+    {
+      "displayName": "Stack Segment",
+      "displayNameKey": "location",
+      "name": "location",
+      "kind": "Grouping",
+      "description": "Breakdown dimension stacked within each bar (e.g., province, product, team)"
+    },
+    {
+      "displayName": "Value",
+      "displayNameKey": "value",
+      "name": "value",
+      "kind": "Measure",
+      "description": "Numeric value for each segment"
+    }
+  ],
+  "dataViewMappings": [
+    {
+      "conditions": [
+        {
+          "group": { "max": 1 },
+          "year": { "max": 1 },
+          "location": { "max": 1 },
+          "value": { "max": 1 }
+        }
+      ],
+      "categorical": {
+        "categories": {
+          "select": [
+            { "for": { "in": "group" } },
+            { "for": { "in": "year" } },
+            { "for": { "in": "location" } }
+          ]
+        },
+        "values": {
+          "select": [
+            { "for": { "in": "value" } }
+          ]
+        }
+      }
+    }
+  ],
+  "objects": {
+    "xAxis": {
+      "displayName": "X-Axis",
+      "properties": {
+        "show": {
+          "displayName": "Show",
+          "type": { "bool": true }
+        },
+        "title": {
+          "displayName": "Title",
+          "type": { "text": true }
+        },
+        "fontSize": {
+          "displayName": "Category Font Size",
+          "type": { "numeric": true }
+        },
+        "fontColor": {
+          "displayName": "Font Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "yearLabelSize": {
+          "displayName": "Sub-Category Font Size",
+          "type": { "numeric": true }
+        }
+      }
+    },
+    "yAxis": {
+      "displayName": "Y-Axis",
+      "properties": {
+        "show": {
+          "displayName": "Show",
+          "type": { "bool": true }
+        },
+        "title": {
+          "displayName": "Title",
+          "type": { "text": true }
+        },
+        "fontSize": {
+          "displayName": "Font Size",
+          "type": { "numeric": true }
+        },
+        "fontColor": {
+          "displayName": "Font Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "shortFormat": {
+          "displayName": "Short Format (K/M/B)",
+          "description": "Display 1,000,000 as 1M",
+          "type": { "bool": true }
+        },
+        "gridLines": {
+          "displayName": "Grid Lines",
+          "type": { "bool": true }
+        }
+      }
+    },
+    "dataLabels": {
+      "displayName": "Data Labels",
+      "properties": {
+        "show": {
+          "displayName": "Show Labels",
+          "type": { "bool": true }
+        },
+        "showPercentage": {
+          "displayName": "Show Percentage",
+          "type": { "bool": true }
+        },
+        "showValue": {
+          "displayName": "Show Value",
+          "type": { "bool": true }
+        },
+        "showTotal": {
+          "displayName": "Show Total Above Bar",
+          "type": { "bool": true }
+        },
+        "fontSize": {
+          "displayName": "Font Size",
+          "type": { "numeric": true }
+        },
+        "minSegmentHeight": {
+          "displayName": "Min Segment Height (px)",
+          "description": "Hide label when segment is smaller than this",
+          "type": { "numeric": true }
+        },
+        "valueFormat": {
+          "displayName": "Value Format",
+          "description": "short = 1.2M, full = 1,234,567",
+          "type": {
+            "enumeration": [
+              { "value": "short", "displayName": "Short (1.2M)" },
+              { "value": "full", "displayName": "Full (1,234,567)" }
+            ]
+          }
+        }
+      }
+    },
+    "growthAnnotation": {
+      "displayName": "Growth Annotation",
+      "properties": {
+        "show": {
+          "displayName": "Show",
+          "type": { "bool": true }
+        },
+        "labelColor": {
+          "displayName": "Label Color",
+          "description": "Color of the growth percentage text",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "lineColor": {
+          "displayName": "Line Color",
+          "description": "Color of the connecting line between bars",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "dotColor": {
+          "displayName": "Dot Color",
+          "description": "Color of the endpoint dots",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "fontSize": {
+          "displayName": "Label Font Size",
+          "type": { "numeric": true }
+        },
+        "lineStyle": {
+          "displayName": "Line Style",
+          "type": {
+            "enumeration": [
+              { "value": "dashed", "displayName": "Dashed" },
+              { "value": "solid", "displayName": "Solid" },
+              { "value": "dotted", "displayName": "Dotted" }
+            ]
+          }
+        },
+        "lineGap": {
+          "displayName": "Gap Above Bars (px)",
+          "description": "Vertical spacing between bar totals and the connecting line",
+          "type": { "numeric": true }
+        },
+        "showDots": {
+          "displayName": "Show Endpoint Dots",
+          "type": { "bool": true }
+        }
+      }
+    },
+    "legend": {
+      "displayName": "Legend",
+      "properties": {
+        "show": {
+          "displayName": "Show",
+          "type": { "bool": true }
+        },
+        "fontSize": {
+          "displayName": "Font Size",
+          "type": { "numeric": true }
+        },
+        "position": {
+          "displayName": "Position",
+          "type": {
+            "enumeration": [
+              { "value": "top", "displayName": "Top" },
+              { "value": "bottom", "displayName": "Bottom" }
+            ]
+          }
+        }
+      }
+    },
+    "sortSettings": {
+      "displayName": "Sort Order",
+      "properties": {
+        "yearOrder": {
+          "displayName": "Sub-Category Order",
+          "type": {
+            "enumeration": [
+              { "value": "asc", "displayName": "Ascending (A → Z)" },
+              { "value": "desc", "displayName": "Descending (Z → A)" },
+              { "value": "data", "displayName": "Data Order" }
+            ]
+          }
+        },
+        "stackOrder": {
+          "displayName": "Stack Order",
+          "type": {
+            "enumeration": [
+              { "value": "data", "displayName": "Data Order" },
+              { "value": "asc", "displayName": "Ascending by Value" },
+              { "value": "desc", "displayName": "Descending by Value" }
+            ]
+          }
+        }
+      }
+    },
+    "colorPalette": {
+      "displayName": "Stack Colors",
+      "properties": {
+        "color1": { "displayName": "Color 1", "type": { "fill": { "solid": { "color": true } } } },
+        "color2": { "displayName": "Color 2", "type": { "fill": { "solid": { "color": true } } } },
+        "color3": { "displayName": "Color 3", "type": { "fill": { "solid": { "color": true } } } },
+        "color4": { "displayName": "Color 4", "type": { "fill": { "solid": { "color": true } } } },
+        "color5": { "displayName": "Color 5", "type": { "fill": { "solid": { "color": true } } } },
+        "color6": { "displayName": "Color 6", "type": { "fill": { "solid": { "color": true } } } },
+        "color7": { "displayName": "Color 7", "type": { "fill": { "solid": { "color": true } } } },
+        "color8": { "displayName": "Color 8", "type": { "fill": { "solid": { "color": true } } } },
+        "color9": { "displayName": "Color 9", "type": { "fill": { "solid": { "color": true } } } },
+        "color10": { "displayName": "Color 10", "type": { "fill": { "solid": { "color": true } } } }
+      }
+    }
+  },
+  "privileges": []
+}

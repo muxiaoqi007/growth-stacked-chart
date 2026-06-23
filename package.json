@@ -1,0 +1,29 @@
+{
+  "name": "growth-stacked-chart",
+  "version": "1.0.0",
+  "description": "Growth Stacked Bar Chart - Grouped stacked bars with segment labels, growth annotations, and connecting lines",
+  "main": "src/visual.ts",
+  "scripts": {
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development --watch",
+    "package": "npm run build && pbiviz package"
+  },
+  "dependencies": {
+    "d3": "^7.9.0",
+    "powerbi-visuals-utils-tooltiputils": "^6.0.4"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "css-loader": "^6.10.0",
+    "less": "^4.2.0",
+    "less-loader": "^11.1.4",
+    "mini-css-extract-plugin": "^2.8.1",
+    "powerbi-visuals-api": "~5.9.0",
+    "powerbi-visuals-webpack-plugin": "^4.1.0",
+    "style-loader": "^3.3.4",
+    "ts-loader": "^9.5.1",
+    "typescript": "~5.4.5",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4"
+  }
+}
