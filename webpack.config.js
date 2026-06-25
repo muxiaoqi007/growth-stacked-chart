@@ -1,6 +1,6 @@
 const path = require("path");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-const PowerBICustomVisualsWebpackPlugin = require("powerbi-visuals-webpack-plugin");
+const { PowerBICustomVisualsWebpackPlugin } = require("powerbi-visuals-webpack-plugin");
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === "production";

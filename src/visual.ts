@@ -37,9 +37,12 @@ interface GroupAggregate {
 /*  Constants                                                           */
 /* ================================================================== */
 
-const TOP_LEGEND_HEIGHT = 24;
+const LEGEND_HEIGHT = 14;
 const LEGEND_ICON_RADIUS = 5;
 const LEGEND_EDGE_MARGIN = 10;
+const TOP_LEGEND_Y = 6;
+const TOP_PLOT_MARGIN = 32;
+const BOTTOM_LEGEND_GAP = 10;
 
 const PALETTE = [
   "#E05252", "#F0C230", "#4DB856", "#98D960",
@@ -291,7 +294,7 @@ export class Visual implements IVisual {
 
     const lgShow = bool(lgC, "show", true);
     const lgFontSize = num(lgC, "fontSize", 11);
-    const lgPosition = dd(lgC, "position", "TopLeft");
+    const lgPosition = dd(lgC, "position", "TopCenter");
     const lgTitle = txt(lgC, "title", "");
 
     // Build palette from color settings
@@ -313,10 +316,16 @@ export class Visual implements IVisual {
     const locColor = d3.scaleOrdinal<string, string>().domain(locations).range(palette);
 
     // Layout
-    const isTop = lgPosition.startsWith("Top");
-    const legendH = lgShow && isTop ? TOP_LEGEND_HEIGHT : 0;
-    const bottomLegendH = lgShow && !isTop ? 22 : 0;
-    const margin = { top: 32 + legendH, right: 30, bottom: 44 + bottomLegendH, left: 80 };
+    // Native Power BI-like density: the visual host owns the title, so legend starts near
+    // the top edge of the SVG and plot area follows tightly below it.
+    const isTop = lgShow && lgPosition.startsWith("Top");
+    const isBottom = lgShow && lgPosition.startsWith("Bottom");
+    const margin = {
+      top: isTop ? TOP_PLOT_MARGIN : 24,
+      right: 30,
+      bottom: 44 + (isBottom ? LEGEND_HEIGHT + BOTTOM_LEGEND_GAP + 8 : 0),
+      left: 80,
+    };
     const chartW = width - margin.left - margin.right;
     const chartH = height - margin.top - margin.bottom;
     if (chartW < 60 || chartH < 60) return;
@@ -554,7 +563,7 @@ export class Visual implements IVisual {
 
     // ---- Legend ----
     if (lgShow) {
-      this.drawLegend(g, locations, locColor, chartW, chartH, lgPosition, lgFontSize, lgTitle, hc, hcFg);
+      this.drawLegend(g, locations, locColor, chartW, chartH, lgPosition, lgFontSize, lgTitle, margin.top, hc, hcFg);
     }
   }
 
@@ -568,12 +577,16 @@ export class Visual implements IVisual {
     colorScale: d3.ScaleOrdinal<string, string>,
     chartW: number, chartH: number,
     position: string, fontSize: number, title: string,
+    plotTop: number,
     hc: boolean, hcFg: string,
   ): void {
     const isTop = position.startsWith("Top");
 
-    // Fluent Design spacing using official constants
-    const yPos = isTop ? -(TOP_LEGEND_HEIGHT - 6) : chartH + 46;
+    // Use explicit absolute placement for top legends to avoid margin/y-offset cancellation.
+    // Since `g` is translated by `plotTop`, yPos is relative to the plot area's top edge.
+    const yPos = isTop
+      ? TOP_LEGEND_Y - plotTop
+      : chartH + BOTTOM_LEGEND_GAP;
 
     const legendG = g.append("g").attr("class", "legend")
       .attr("transform", `translate(0, ${yPos})`);

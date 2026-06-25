@@ -145,7 +145,7 @@ export class LegendCard extends formattingSettings.SimpleCard {
     name: "show", displayName: "Show", value: true,
   } as formattingSettings.ToggleSwitch);
   position = new formattingSettings.AutoDropdown({
-    name: "position", displayName: "Position", value: "TopLeft",
+    name: "position", displayName: "Position", value: "TopCenter",
   } as formattingSettings.AutoDropdown);
   fontSize = new formattingSettings.NumUpDown({
     name: "fontSize", displayName: "Font Size", value: 11,

@@ -213,8 +213,8 @@
           "displayName": "Position",
           "type": {
             "enumeration": [
-              { "value": "TopLeft", "displayName": "Top Left" },
               { "value": "TopCenter", "displayName": "Top Center" },
+              { "value": "TopLeft", "displayName": "Top Left" },
               { "value": "TopRight", "displayName": "Top Right" },
               { "value": "BottomLeft", "displayName": "Bottom Left" },
               { "value": "BottomCenter", "displayName": "Bottom Center" },

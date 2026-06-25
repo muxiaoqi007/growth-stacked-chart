@@ -4,9 +4,10 @@
   "description": "Growth Stacked Bar Chart - Grouped stacked bars with segment labels, growth annotations, and connecting lines",
   "main": "src/visual.ts",
   "scripts": {
-    "build": "webpack --mode production",
-    "dev": "webpack --mode development --watch",
-    "package": "npm run build && pbiviz package"
+    "prepare-api-schema": "node scripts/prepare-api-schema.js",
+    "build": "npm run prepare-api-schema && webpack --mode production",
+    "dev": "npm run prepare-api-schema && webpack --mode development --watch",
+    "package": "npm run prepare-api-schema && pbiviz package"
   },
   "dependencies": {
     "d3": "^7.9.0",
