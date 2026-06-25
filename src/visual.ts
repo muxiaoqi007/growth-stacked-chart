@@ -85,8 +85,12 @@ function clr(card: Record<string, unknown>, key: string, fb: string): string {
   return s?.value?.value ?? fb;
 }
 function dd(card: Record<string, unknown>, key: string, fb: string): string {
-  const s = card[key] as { value?: { value?: string } } | undefined;
-  return s?.value?.value ?? fb;
+  const s = card[key] as { value?: unknown } | undefined;
+  const v = s?.value;
+  if (v == null) return fb;
+  if (typeof v === "string") return v;
+  if (typeof v === "object" && v !== null && "value" in v) return String((v as Record<string, unknown>).value);
+  return fb;
 }
 
 /* ================================================================== */
@@ -121,6 +125,34 @@ export class Visual implements IVisual {
   }
 
   /* ================================================================ */
+  /*  normalizeDropdowns — fix ItemDropdown values after populate       */
+  /*  getPropertyValue may return undefined when DataView value          */
+  /*  doesn't match items; this ensures valid IEnumMember always.       */
+  /* ================================================================ */
+
+  private normalizeDropdowns(): void {
+    for (const card of this.formattingModel.cards) {
+      const slices = (card as unknown as { slices?: unknown[] }).slices;
+      if (!Array.isArray(slices)) continue;
+      for (const slice of slices) {
+        const s = slice as Record<string, unknown>;
+        if (s.type !== "Dropdown" || !Array.isArray(s.items)) continue;
+        const items = s.items as { value: string; displayName: string }[];
+        const val = s.value;
+        if (val == null) {
+          // Value lost — restore first item as default
+          s.value = items[0];
+        } else if (typeof val === "string" || typeof val === "number") {
+          // Raw primitive from DataView — find matching IEnumMember
+          const found = items.find(i => i.value == val);
+          s.value = found ?? items[0];
+        }
+        // else already an IEnumMember object — leave it
+      }
+    }
+  }
+
+  /* ================================================================ */
   /*  getFormattingModel — replaces enumerateObjectInstances           */
   /* ================================================================ */
 
@@ -129,6 +161,7 @@ export class Visual implements IVisual {
       this.formattingModel = this.formattingSettingsService.populateFormattingSettingsModel(
         VisualFormattingSettingsModel, this.lastDataView
       );
+      this.normalizeDropdowns();
     }
     return this.formattingSettingsService.buildFormattingModel(this.formattingModel);
   }
@@ -153,6 +186,7 @@ export class Visual implements IVisual {
         this.formattingModel = this.formattingSettingsService.populateFormattingSettingsModel(
           VisualFormattingSettingsModel, this.lastDataView
         );
+        this.normalizeDropdowns();
       }
 
       const bars = this.parseData(this.lastDataView);
