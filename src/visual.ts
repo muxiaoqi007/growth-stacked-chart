@@ -1,39 +1,28 @@
 /*
- * GrowthStackedChart — Power BI Custom Visual v4
- * Fixes: growth calculation, tooltips, spacing, separate colors, legend
- * Built with D3.js v7 + powerbi-visuals-api 5.x
+ * GrowthStackedChart — Power BI Custom Visual v8
+ * Modern API: getFormattingModel + rendering events + ColorHelper
+ * Built with D3.js v7 + powerbi-visuals-api 5.9.0
  */
 
 import powerbi from "powerbi-visuals-api";
 import * as d3 from "d3";
+
 import IVisual = powerbi.extensibility.IVisual;
 import IVisualHost = powerbi.extensibility.visual.IVisualHost;
 import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
 import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import DataView = powerbi.DataView;
-import VisualObjectInstance = powerbi.VisualObjectInstance;
-import EnumerateVisualObjectInstancesOptions = powerbi.EnumerateVisualObjectInstancesOptions;
+import FormattingModel = powerbi.visuals.FormattingModel;
+import IVisualEventService = powerbi.extensibility.IVisualEventService;
+
+import { FormattingSettingsService } from "powerbi-visuals-utils-formattingmodel";
+import { VisualFormattingSettingsModel } from "./settings";
+import { ColorHelper } from "powerbi-visuals-utils-colorutils";
 import { createTooltipServiceWrapper, ITooltipServiceWrapper } from "powerbi-visuals-utils-tooltiputils";
 import "../style/visual.less";
 
 /* ================================================================== */
-/*  Settings                                                           */
-/* ================================================================== */
-
-interface VisualSettings {
-  xShow: boolean; xTitle: string; xFontSize: number; xFontColor: string; xYearSize: number;
-  yShow: boolean; yTitle: string; yFontSize: number; yFontColor: string; yShortFormat: boolean; yGridLines: boolean;
-  dlShow: boolean; dlShowPct: boolean; dlShowVal: boolean; dlShowTotal: boolean;
-  dlFontSize: number; dlMinHeight: number; dlValueFormat: string;
-  gaShow: boolean; gaLineColor: string; gaLabelColor: string; gaDotColor: string;
-  gaFontSize: number; gaLineStyle: string; gaLineGap: number; gaShowDots: boolean;
-  lgShow: boolean; lgFontSize: number; lgPosition: string; lgTitle: string;
-  yearOrder: string; stackOrder: string;
-  palette: string[];
-}
-
-/* ================================================================== */
-/*  Data                                                               */
+/*  Data interfaces                                                     */
 /* ================================================================== */
 
 interface SegmentDatum { location: string; value: number; }
@@ -45,26 +34,20 @@ interface GroupAggregate {
 }
 
 /* ================================================================== */
-/*  Defaults                                                           */
+/*  Constants                                                           */
 /* ================================================================== */
 
-const DEFAULTS: VisualSettings = {
-  xShow: true, xTitle: "", xFontSize: 12, xFontColor: "#555", xYearSize: 11,
-  yShow: true, yTitle: "", yFontSize: 11, yFontColor: "#666", yShortFormat: true, yGridLines: true,
-  dlShow: true, dlShowPct: true, dlShowVal: true, dlShowTotal: true,
-  dlFontSize: 10, dlMinHeight: 18, dlValueFormat: "full",
-  gaShow: true, gaLineColor: "#E8800A", gaLabelColor: "#E8800A", gaDotColor: "#E8800A",
-  gaFontSize: 14, gaLineStyle: "dashed", gaLineGap: 28, gaShowDots: true,
-  lgShow: true, lgFontSize: 11, lgPosition: "TopLeft", lgTitle: "",
-  yearOrder: "asc", stackOrder: "data",
-  palette: [
-    "#E05252", "#F0C230", "#4DB856", "#98D960",
-    "#4A90D9", "#8B5CF6", "#E88BC5", "#38BDF8", "#F97316", "#14B8A6"
-  ]
-};
+const TOP_LEGEND_HEIGHT = 24;
+const LEGEND_ICON_RADIUS = 5;
+const LEGEND_EDGE_MARGIN = 10;
+
+const PALETTE = [
+  "#E05252", "#F0C230", "#4DB856", "#98D960",
+  "#4A90D9", "#8B5CF6", "#E88BC5", "#38BDF8", "#F97316", "#14B8A6",
+];
 
 /* ================================================================== */
-/*  Helpers                                                            */
+/*  Helpers                                                             */
 /* ================================================================== */
 
 function textColorFor(hex: string): string {
@@ -82,13 +65,32 @@ function fmtShort(n: number): string {
 }
 function fmtNum(n: number, mode: string): string { return mode === "short" ? fmtShort(n) : fmtFull(n); }
 function fmtPct(n: number): string { return (n >= 0 ? "+" : "") + n.toFixed(1) + "%"; }
-function readFill(obj: Record<string, unknown>, key: string, fallback: string): string {
-  const f = obj[key] as powerbi.Fill | undefined;
-  return f?.solid?.color || fallback;
+
+/* -- Settings accessor helpers for FormattingSettingsModel ---------- */
+
+function bool(card: Record<string, unknown>, key: string, fb: boolean): boolean {
+  const s = card[key] as { value?: boolean } | undefined;
+  return s?.value ?? fb;
+}
+function num(card: Record<string, unknown>, key: string, fb: number): number {
+  const s = card[key] as { value?: number } | undefined;
+  return s?.value ?? fb;
+}
+function txt(card: Record<string, unknown>, key: string, fb: string): string {
+  const s = card[key] as { value?: string } | undefined;
+  return s?.value ?? fb;
+}
+function clr(card: Record<string, unknown>, key: string, fb: string): string {
+  const s = card[key] as { value?: { value?: string } } | undefined;
+  return s?.value?.value ?? fb;
+}
+function dd(card: Record<string, unknown>, key: string, fb: string): string {
+  const s = card[key] as { value?: { value?: string } } | undefined;
+  return s?.value?.value ?? fb;
 }
 
 /* ================================================================== */
-/*  Visual                                                             */
+/*  Visual                                                              */
 /* ================================================================== */
 
 export class Visual implements IVisual {
@@ -96,7 +98,12 @@ export class Visual implements IVisual {
   private tooltipService: ITooltipServiceWrapper;
   private root: d3.Selection<HTMLElement, unknown, null, undefined>;
   private svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
-  private s: VisualSettings;
+
+  private formattingSettingsService: FormattingSettingsService;
+  private formattingModel: VisualFormattingSettingsModel;
+  private colorHelper: ColorHelper;
+  private events: IVisualEventService;
+  private lastDataView: DataView | undefined;
 
   constructor(options: VisualConstructorOptions) {
     this.host = options.host;
@@ -105,149 +112,64 @@ export class Visual implements IVisual {
     );
     this.root = d3.select(options.element).classed("growthStackedChart", true);
     this.svg = this.root.append("svg");
-    this.s = { ...DEFAULTS, palette: [...DEFAULTS.palette] };
+
+    // Modern API services
+    this.formattingSettingsService = new FormattingSettingsService();
+    this.formattingModel = new VisualFormattingSettingsModel();
+    this.colorHelper = new ColorHelper(this.host.colorPalette);
+    this.events = options.host.eventService;
   }
 
   /* ================================================================ */
-  /*  enumerateObjectInstances                                         */
+  /*  getFormattingModel — replaces enumerateObjectInstances           */
   /* ================================================================ */
 
-  public enumerateObjectInstances(
-    options: EnumerateVisualObjectInstancesOptions
-  ): VisualObjectInstance[] {
-    const s = this.s;
-    const obj = options.objectName;
-
-    if (obj === "xAxis") return [{
-      objectName: "xAxis", selector: undefined,
-      properties: { show: s.xShow, title: s.xTitle, fontSize: s.xFontSize, fontColor: s.xFontColor, yearLabelSize: s.xYearSize }
-    }];
-    if (obj === "yAxis") return [{
-      objectName: "yAxis", selector: undefined,
-      properties: { show: s.yShow, title: s.yTitle, fontSize: s.yFontSize, fontColor: s.yFontColor, shortFormat: s.yShortFormat, gridLines: s.yGridLines }
-    }];
-    if (obj === "dataLabels") return [{
-      objectName: "dataLabels", selector: undefined,
-      properties: { show: s.dlShow, showPercentage: s.dlShowPct, showValue: s.dlShowVal, showTotal: s.dlShowTotal, fontSize: s.dlFontSize, minSegmentHeight: s.dlMinHeight, valueFormat: s.dlValueFormat }
-    }];
-    if (obj === "growthAnnotation") return [{
-      objectName: "growthAnnotation", selector: undefined,
-      properties: {
-        show: s.gaShow,
-        lineColor: s.gaLineColor,
-        labelColor: s.gaLabelColor,
-        dotColor: s.gaDotColor,
-        fontSize: s.gaFontSize, lineStyle: s.gaLineStyle,
-        lineGap: s.gaLineGap, showDots: s.gaShowDots
-      }
-    }];
-    if (obj === "legend") return [{
-      objectName: "legend", selector: undefined,
-      properties: { show: s.lgShow, fontSize: s.lgFontSize, position: s.lgPosition, title: s.lgTitle }
-    }];
-    if (obj === "sortSettings") return [{
-      objectName: "sortSettings", selector: undefined,
-      properties: { yearOrder: s.yearOrder, stackOrder: s.stackOrder }
-    }];
-    if (obj === "colorPalette") {
-      const props: Record<string, string> = {};
-      for (let i = 0; i < 10; i++) props[`color${i + 1}`] = s.palette[i] || DEFAULTS.palette[i] || "#ccc";
-      return [{ objectName: "colorPalette", selector: undefined, properties: props }];
+  public getFormattingModel(): FormattingModel {
+    if (this.lastDataView) {
+      this.formattingModel = this.formattingSettingsService.populateFormattingSettingsModel(
+        VisualFormattingSettingsModel, this.lastDataView
+      );
     }
-    return [];
+    return this.formattingSettingsService.buildFormattingModel(this.formattingModel);
   }
 
   /* ================================================================ */
-  /*  update                                                           */
+  /*  update                                                            */
   /* ================================================================ */
 
   public update(options: VisualUpdateOptions): void {
     const { width, height } = options.viewport;
     if (width < 50 || height < 50) return;
-    this.readSettings(options.dataViews);
-    const bars = this.parseData(options.dataViews?.[0]);
-    if (!bars.length) { this.svg.selectAll("*").remove(); return; }
-    this.render(bars, width, height, options.dataViews?.[0]);
-  }
 
-  /* ================================================================ */
-  /*  readSettings                                                     */
-  /* ================================================================ */
+    // Signal rendering started
+    this.events.renderingStarted(options);
 
-  private readSettings(dvs: DataView[] | undefined): void {
-    this.s = { ...DEFAULTS, palette: [...DEFAULTS.palette] };
-    if (!dvs?.[0]?.metadata?.objects) return;
-    const objs = dvs[0].metadata.objects;
-    type O = Record<string, unknown>;
-    const r = (n: string) => objs[n] as O | undefined;
+    try {
+      // Store dataView for getFormattingModel()
+      this.lastDataView = options.dataViews?.[0];
 
-    const x = r("xAxis");
-    if (x) {
-      if (x["show"] !== undefined) this.s.xShow = x["show"] as boolean;
-      if (typeof x["title"] === "string") this.s.xTitle = x["title"];
-      if (x["fontSize"] !== undefined) this.s.xFontSize = x["fontSize"] as number;
-      this.s.xFontColor = readFill(x, "fontColor", DEFAULTS.xFontColor);
-      if (x["yearLabelSize"] !== undefined) this.s.xYearSize = x["yearLabelSize"] as number;
-    }
-
-    const y = r("yAxis");
-    if (y) {
-      if (y["show"] !== undefined) this.s.yShow = y["show"] as boolean;
-      if (typeof y["title"] === "string") this.s.yTitle = y["title"];
-      if (y["fontSize"] !== undefined) this.s.yFontSize = y["fontSize"] as number;
-      this.s.yFontColor = readFill(y, "fontColor", DEFAULTS.yFontColor);
-      if (y["shortFormat"] !== undefined) this.s.yShortFormat = y["shortFormat"] as boolean;
-      if (y["gridLines"] !== undefined) this.s.yGridLines = y["gridLines"] as boolean;
-    }
-
-    const dl = r("dataLabels");
-    if (dl) {
-      if (dl["show"] !== undefined) this.s.dlShow = dl["show"] as boolean;
-      if (dl["showPercentage"] !== undefined) this.s.dlShowPct = dl["showPercentage"] as boolean;
-      if (dl["showValue"] !== undefined) this.s.dlShowVal = dl["showValue"] as boolean;
-      if (dl["showTotal"] !== undefined) this.s.dlShowTotal = dl["showTotal"] as boolean;
-      if (dl["fontSize"] !== undefined) this.s.dlFontSize = dl["fontSize"] as number;
-      if (dl["minSegmentHeight"] !== undefined) this.s.dlMinHeight = dl["minSegmentHeight"] as number;
-      if (typeof dl["valueFormat"] === "string") this.s.dlValueFormat = dl["valueFormat"];
-    }
-
-    const ga = r("growthAnnotation");
-    if (ga) {
-      if (ga["show"] !== undefined) this.s.gaShow = ga["show"] as boolean;
-      this.s.gaLineColor  = readFill(ga, "lineColor",  DEFAULTS.gaLineColor);
-      this.s.gaLabelColor = readFill(ga, "labelColor", DEFAULTS.gaLabelColor);
-      this.s.gaDotColor   = readFill(ga, "dotColor",   DEFAULTS.gaDotColor);
-      if (ga["fontSize"] !== undefined) this.s.gaFontSize = ga["fontSize"] as number;
-      if (typeof ga["lineStyle"] === "string") this.s.gaLineStyle = ga["lineStyle"];
-      if (ga["lineGap"] !== undefined) this.s.gaLineGap = ga["lineGap"] as number;
-      if (ga["showDots"] !== undefined) this.s.gaShowDots = ga["showDots"] as boolean;
-    }
-
-    const lg = r("legend");
-    if (lg) {
-      if (lg["show"] !== undefined) this.s.lgShow = lg["show"] as boolean;
-      if (lg["fontSize"] !== undefined) this.s.lgFontSize = lg["fontSize"] as number;
-      if (typeof lg["position"] === "string") this.s.lgPosition = lg["position"];
-      if (typeof lg["title"] === "string") this.s.lgTitle = lg["title"];
-    }
-
-    const so = r("sortSettings");
-    if (so) {
-      if (typeof so["yearOrder"] === "string") this.s.yearOrder = so["yearOrder"];
-      if (typeof so["stackOrder"] === "string") this.s.stackOrder = so["stackOrder"];
-    }
-
-    const cp = r("colorPalette");
-    if (cp) {
-      for (let i = 0; i < 10; i++) {
-        const fill = cp[`color${i + 1}`] as powerbi.Fill | undefined;
-        if (fill?.solid?.color) this.s.palette[i] = fill.solid.color;
+      // Resolve current settings from DataView
+      if (this.lastDataView) {
+        this.formattingModel = this.formattingSettingsService.populateFormattingSettingsModel(
+          VisualFormattingSettingsModel, this.lastDataView
+        );
       }
+
+      const bars = this.parseData(this.lastDataView);
+      if (!bars.length) {
+        this.svg.selectAll("*").remove();
+        this.events.renderingFinished(options);
+        return;
+      }
+      this.render(bars, width, height);
+      this.events.renderingFinished(options);
+    } catch (e) {
+      this.events.renderingFailed(options, (e as Error).message);
     }
   }
 
   /* ================================================================ */
-  /*  parseData                                                        */
+  /*  parseData                                                         */
   /* ================================================================ */
 
   private parseData(dv: DataView | undefined): BarDatum[] {
@@ -279,54 +201,121 @@ export class Visual implements IVisual {
   }
 
   /* ================================================================ */
-  /*  sortYears                                                        */
+  /*  Sorting                                                           */
   /* ================================================================ */
 
   private sortYears(years: string[]): string[] {
+    const order = dd(
+      this.formattingModel.sortSettingsCard as unknown as Record<string, unknown>,
+      "yearOrder", "asc"
+    );
     const arr = [...years];
-    if (this.s.yearOrder === "asc") {
-      arr.sort((a, b) => { const na = parseFloat(a), nb = parseFloat(b); return (!isNaN(na) && !isNaN(nb)) ? na - nb : a.localeCompare(b); });
-    } else if (this.s.yearOrder === "desc") {
-      arr.sort((a, b) => { const na = parseFloat(a), nb = parseFloat(b); return (!isNaN(na) && !isNaN(nb)) ? nb - na : b.localeCompare(a); });
+    if (order === "asc") {
+      arr.sort((a, b) => {
+        const na = parseFloat(a), nb = parseFloat(b);
+        return (!isNaN(na) && !isNaN(nb)) ? na - nb : a.localeCompare(b);
+      });
+    } else if (order === "desc") {
+      arr.sort((a, b) => {
+        const na = parseFloat(a), nb = parseFloat(b);
+        return (!isNaN(na) && !isNaN(nb)) ? nb - na : b.localeCompare(a);
+      });
     }
     return arr;
   }
 
-  /* ================================================================ */
-  /*  sortLocations                                                    */
-  /* ================================================================ */
-
   private sortLocations(locations: string[], bars: BarDatum[]): string[] {
-    if (this.s.stackOrder === "data") return locations;
+    const order = dd(
+      this.formattingModel.sortSettingsCard as unknown as Record<string, unknown>,
+      "stackOrder", "data"
+    );
+    if (order === "data") return locations;
     const totals = new Map<string, number>();
     for (const loc of locations) totals.set(loc, 0);
-    for (const bar of bars) for (const seg of bar.segments) totals.set(seg.location, (totals.get(seg.location) || 0) + seg.value);
+    for (const bar of bars)
+      for (const seg of bar.segments)
+        totals.set(seg.location, (totals.get(seg.location) || 0) + seg.value);
     const arr = [...locations];
-    arr.sort((a, b) => this.s.stackOrder === "asc"
+    arr.sort((a, b) => order === "asc"
       ? (totals.get(a) || 0) - (totals.get(b) || 0)
       : (totals.get(b) || 0) - (totals.get(a) || 0));
     return arr;
   }
 
   /* ================================================================ */
-  /*  render                                                           */
+  /*  render                                                            */
   /* ================================================================ */
 
-  private render(bars: BarDatum[], width: number, height: number, dv?: DataView): void {
+  private render(bars: BarDatum[], width: number, height: number): void {
     this.svg.selectAll("*").remove();
     this.svg.attr("width", width).attr("height", height);
 
-    const s = this.s;
+    const m = this.formattingModel;
+    const xC = m.xAxisCard as unknown as Record<string, unknown>;
+    const yC = m.yAxisCard as unknown as Record<string, unknown>;
+    const dlC = m.dataLabelsCard as unknown as Record<string, unknown>;
+    const gaC = m.growthAnnotationCard as unknown as Record<string, unknown>;
+    const lgC = m.legendCard as unknown as Record<string, unknown>;
+    const cpC = m.colorPaletteCard as unknown as Record<string, unknown>;
+
+    // Read all settings via helpers
+    const xShow = bool(xC, "show", true);
+    const xTitle = txt(xC, "title", "");
+    const xFontSize = num(xC, "fontSize", 12);
+    const xFontColor = clr(xC, "fontColor", "#555555");
+    const xYearSize = num(xC, "yearLabelSize", 11);
+
+    const yShow = bool(yC, "show", true);
+    const yTitle = txt(yC, "title", "");
+    const yFontSize = num(yC, "fontSize", 11);
+    const yFontColor = clr(yC, "fontColor", "#666666");
+    const yShortFormat = bool(yC, "shortFormat", true);
+    const yGridLines = bool(yC, "gridLines", true);
+
+    const dlShow = bool(dlC, "show", true);
+    const dlShowPct = bool(dlC, "showPercentage", true);
+    const dlShowVal = bool(dlC, "showValue", true);
+    const dlShowTotal = bool(dlC, "showTotal", true);
+    const dlFontSize = num(dlC, "fontSize", 10);
+    const dlMinHeight = num(dlC, "minSegmentHeight", 18);
+    const dlValueFormat = dd(dlC, "valueFormat", "full");
+
+    const gaShow = bool(gaC, "show", true);
+    const gaLabelColor = clr(gaC, "labelColor", "#E8800A");
+    const gaLineColor = clr(gaC, "lineColor", "#E8800A");
+    const gaDotColor = clr(gaC, "dotColor", "#E8800A");
+    const gaFontSize = num(gaC, "fontSize", 14);
+    const gaLineStyle = dd(gaC, "lineStyle", "dashed");
+    const gaLineGap = num(gaC, "lineGap", 28);
+    const gaShowDots = bool(gaC, "showDots", true);
+
+    const lgShow = bool(lgC, "show", true);
+    const lgFontSize = num(lgC, "fontSize", 11);
+    const lgPosition = dd(lgC, "position", "TopLeft");
+    const lgTitle = txt(lgC, "title", "");
+
+    // Build palette from color settings
+    const palette: string[] = [];
+    for (let i = 1; i <= 10; i++) {
+      palette.push(clr(cpC, `color${i}`, PALETTE[i - 1]));
+    }
+
+    // High contrast overrides
+    const hc = this.colorHelper.isHighContrast;
+    const hcFg = hc ? this.colorHelper.getHighContrastColor("foreground", "#000000") : "";
+    const hcBg = hc ? this.colorHelper.getHighContrastColor("background", "#FFFFFF") : "";
+
+    // Data processing
     const groups = [...new Set(bars.map(b => b.group))];
     const years  = this.sortYears([...new Set(bars.map(b => b.year))]);
     const rawLocs = [...new Set(bars.flatMap(b => b.segments.map(seg => seg.location)))];
     const locations = this.sortLocations(rawLocs, bars);
+    const locColor = d3.scaleOrdinal<string, string>().domain(locations).range(palette);
 
-    const locColor = d3.scaleOrdinal<string, string>().domain(locations).range(s.palette);
-
-    const isTop = s.lgPosition.startsWith("Top");
-    const legendH = s.lgShow ? (isTop ? 24 : 0) : 0;
-    const bottomLegendH = s.lgShow ? (!isTop ? 22 : 0) : 0;
+    // Layout
+    const isTop = lgPosition.startsWith("Top");
+    const legendH = lgShow && isTop ? TOP_LEGEND_HEIGHT : 0;
+    const bottomLegendH = lgShow && !isTop ? 22 : 0;
     const margin = { top: 32 + legendH, right: 30, bottom: 44 + bottomLegendH, left: 80 };
     const chartW = width - margin.left - margin.right;
     const chartH = height - margin.top - margin.bottom;
@@ -342,62 +331,78 @@ export class Visual implements IVisual {
 
     const g = this.svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // ---- grid ----
-    if (s.yGridLines) {
+    // ---- Grid ----
+    if (yGridLines) {
       g.selectAll(".grid-line").data(y.ticks(5)).enter().append("line")
         .attr("class", "grid-line")
-        .attr("x1", 0).attr("x2", chartW).attr("y1", d => y(d)).attr("y2", d => y(d));
+        .attr("x1", 0).attr("x2", chartW)
+        .attr("y1", d => y(d)).attr("y2", d => y(d))
+        .attr("stroke", hc ? hcFg : undefined);
     }
 
     // ---- X axis ----
-    if (s.xShow) {
+    if (xShow) {
       g.append("line").attr("x1", 0).attr("x2", chartW)
-        .attr("y1", chartH).attr("y2", chartH).attr("stroke", "#ccc");
+        .attr("y1", chartH).attr("y2", chartH)
+        .attr("stroke", hc ? hcFg : "#ccc");
       for (const grp of groups) {
-        g.append("text").attr("x", (x0(grp) ?? 0) + x0.bandwidth() / 2).attr("y", chartH + 44)
-          .attr("text-anchor", "middle").style("font-size", `${s.xFontSize}px`)
-          .style("font-weight", "600").style("fill", s.xFontColor).text(grp);
+        g.append("text")
+          .attr("x", (x0(grp) ?? 0) + x0.bandwidth() / 2)
+          .attr("y", chartH + 44)
+          .attr("text-anchor", "middle")
+          .style("font-size", `${xFontSize}px`)
+          .style("font-weight", "600")
+          .style("fill", hc ? hcFg : xFontColor)
+          .text(grp);
       }
-      if (s.xTitle) {
-        // When bottom legend: place title between year/group labels (chartH+30)
-        // When top legend: place title below group labels (chartH+62)
-        const titleY = !isTop && s.lgShow ? chartH + 30 : chartH + 62;
-        g.append("text").attr("x", chartW / 2).attr("y", titleY)
-          .attr("text-anchor", "middle").style("font-size", `${s.xFontSize + 1}px`)
-          .style("fill", s.xFontColor).text(s.xTitle);
+      if (xTitle) {
+        const titleY = !isTop && lgShow ? chartH + 30 : chartH + 62;
+        g.append("text")
+          .attr("x", chartW / 2).attr("y", titleY)
+          .attr("text-anchor", "middle")
+          .style("font-size", `${xFontSize + 1}px`)
+          .style("fill", hc ? hcFg : xFontColor)
+          .text(xTitle);
       }
     }
 
     // ---- Y axis ----
-    if (s.yShow) {
-      const fmt = s.yShortFormat
+    if (yShow) {
+      const fmt = yShortFormat
         ? (d: d3.NumberValue) => fmtShort(Number(d))
         : (d: d3.NumberValue) => d3.format(",")(d);
       const yAx = g.append("g").attr("class", "axis")
         .call(d3.axisLeft(y).ticks(5).tickFormat(fmt));
-      yAx.select(".domain").attr("stroke", "#ccc");
-      yAx.selectAll("text").style("font-size", `${s.yFontSize}px`).style("fill", s.yFontColor);
-      if (s.yTitle) {
+      yAx.select(".domain").attr("stroke", hc ? hcFg : "#ccc");
+      yAx.selectAll("text")
+        .style("font-size", `${yFontSize}px`)
+        .style("fill", hc ? hcFg : yFontColor);
+      if (yTitle) {
         yAx.append("text").attr("transform", "rotate(-90)")
-          .attr("x", -chartH / 2).attr("y", -60).attr("text-anchor", "middle")
-          .style("font-size", `${s.yFontSize + 1}px`).style("fill", s.yFontColor).text(s.yTitle);
+          .attr("x", -chartH / 2).attr("y", -60)
+          .attr("text-anchor", "middle")
+          .style("font-size", `${yFontSize + 1}px`)
+          .style("fill", hc ? hcFg : yFontColor)
+          .text(yTitle);
       }
     }
 
-    // ---- stack ----
-    const stackGen = d3.stack<Record<string, number>>().keys(locations).value((d, key) => d[key] || 0);
+    // ---- Stack layout ----
+    const stackGen = d3.stack<Record<string, number>>()
+      .keys(locations)
+      .value((d, key) => d[key] || 0);
 
-    // ---- bars ----
     const barLookup = new Map<string, BarDatum>();
     bars.forEach(b => barLookup.set(`${b.group}||${b.year}`, b));
 
     const groupAggs: GroupAggregate[] = groups.map(grp => ({
       group: grp, years, totals: {} as Record<string, number>, growthPct: null,
-      barX: {} as Record<string, number>, barTop: {} as Record<string, number>
+      barX: {} as Record<string, number>, barTop: {} as Record<string, number>,
     }));
 
     const tooltipSvc = this.tooltipService;
 
+    // ---- Bars ----
     for (const ga of groupAggs) {
       const grpX = x0(ga.group) ?? 0;
 
@@ -411,7 +416,8 @@ export class Visual implements IVisual {
         ga.barX[yr] = bx + bw / 2;
 
         const row: Record<string, number> = {};
-        for (const loc of locations) row[loc] = bar.segments.find(seg => seg.location === loc)?.value || 0;
+        for (const loc of locations)
+          row[loc] = bar.segments.find(seg => seg.location === loc)?.value || 0;
         const series = stackGen([row]);
 
         const segMap = new Map(bar.segments.map(seg => [seg.location, seg]));
@@ -425,74 +431,77 @@ export class Visual implements IVisual {
 
           const y0v = layer[0][0], y1v = layer[0][1];
           const segH = y(y0v) - y(y1v);
+          const fillColor = hc ? hcBg : locColor(loc);
 
           const rect = barG.append("rect")
             .attr("class", "bar-rect")
             .attr("x", 0).attr("width", bw)
             .attr("y", y(y1v)).attr("height", Math.max(segH, 0))
-            .attr("fill", locColor(loc));
+            .attr("fill", fillColor)
+            .attr("stroke", hc ? hcFg : "none")
+            .attr("stroke-width", hc ? 1 : 0);
 
-          // ---- Tooltip (via addTooltip API) ----
-          const segLabel = loc;
-          const segVal = seg.value;
-          const barTotal = bar.total;
-          const grpYear = `${ga.group} / ${yr}`;
-
+          // Tooltip
           tooltipSvc.addTooltip(
             d3.select(rect.node()),
             () => [
-              { displayName: grpYear, value: "" },
-              { displayName: segLabel, value: fmtFull(segVal) },
-              { displayName: "Total", value: fmtFull(barTotal) },
-              { displayName: "Share", value: `${(segVal / barTotal * 100).toFixed(1)}%` }
+              { displayName: `${ga.group} / ${yr}`, value: "" },
+              { displayName: loc, value: fmtFull(seg.value) },
+              { displayName: "Total", value: fmtFull(bar.total) },
+              { displayName: "Share", value: `${(seg.value / bar.total * 100).toFixed(1)}%` },
             ],
             () => null
           );
 
-          // ---- segment labels ----
-          if (s.dlShow && segH >= s.dlMinHeight) {
-            const tc = textColorFor(locColor(loc));
+          // Segment labels
+          if (dlShow && segH >= dlMinHeight) {
+            const tc = hc ? hcFg : textColorFor(locColor(loc));
             const midY = (y(y1v) + y(y0v)) / 2;
             const cls = `segment-label ${tc === "#333" ? "segment-label-dark" : ""}`;
-            if (s.dlShowPct) {
-              barG.append("text").attr("class", cls).attr("x", bw / 2)
-                .attr("y", midY - (s.dlShowVal ? 6 : 0)).attr("dy", "0.35em")
-                .style("font-size", `${s.dlFontSize}px`)
+            if (dlShowPct) {
+              barG.append("text").attr("class", cls)
+                .attr("x", bw / 2)
+                .attr("y", midY - (dlShowVal ? 6 : 0))
+                .attr("dy", "0.35em")
+                .style("font-size", `${dlFontSize}px`)
                 .text(`${(seg.value / bar.total * 100).toFixed(1)}%`);
             }
-            if (s.dlShowVal) {
-              barG.append("text").attr("class", cls).attr("x", bw / 2)
-                .attr("y", midY + (s.dlShowPct ? 8 : 0)).attr("dy", "0.35em")
-                .style("font-size", `${s.dlFontSize}px`)
-                .text(fmtNum(seg.value, s.dlValueFormat));
+            if (dlShowVal) {
+              barG.append("text").attr("class", cls)
+                .attr("x", bw / 2)
+                .attr("y", midY + (dlShowPct ? 8 : 0))
+                .attr("dy", "0.35em")
+                .style("font-size", `${dlFontSize}px`)
+                .text(fmtNum(seg.value, dlValueFormat));
             }
           }
         }
 
-        // ---- total label above bar ----
+        // Total label above bar
         const barTopY = y(bar.total);
         ga.barTop[yr] = barTopY;
 
-        if (s.dlShow && s.dlShowTotal) {
+        if (dlShow && dlShowTotal) {
           barG.append("text").attr("class", "total-label")
             .attr("x", bw / 2).attr("y", barTopY - 8)
-            .text(fmtNum(bar.total, s.dlValueFormat));
+            .style("fill", hc ? hcFg : undefined)
+            .text(fmtNum(bar.total, dlValueFormat));
         }
 
-        // ---- year label below bar ----
-        if (s.xShow) {
+        // Year label below bar
+        if (xShow) {
           barG.append("text").attr("class", "year-label")
             .attr("x", bw / 2).attr("y", chartH + 18)
-            .style("font-size", `${s.xYearSize}px`)
+            .style("font-size", `${xYearSize}px`)
+            .style("fill", hc ? hcFg : undefined)
             .attr("text-anchor", "middle").text(yr);
         }
       }
     }
 
-    // ---- growth annotations (auto-calculated) ----
-    if (s.gaShow) {
+    // ---- Growth annotations (auto-calculated) ----
+    if (gaShow) {
       for (const ga of groupAggs) {
-        // Auto-calculate growth from bar totals
         let growth: number | null = null;
         if (years.length >= 2) {
           const t0 = ga.totals[years[0]] || 0;
@@ -503,47 +512,39 @@ export class Visual implements IVisual {
         if (growth === null) continue;
 
         const cx = (x0(ga.group) ?? 0) + x0.bandwidth() / 2;
-
-        // Compute the highest total-label position across all bars in this group.
-        // Total labels sit at barTopY − 8 (baseline); the visible top of the text
-        // is ~12 px above that.  The connecting line must clear ALL labels.
         const labelTops = years.map(yr => {
           const bt = ga.barTop[yr];
           return bt !== undefined && bt < chartH ? bt - 8 : chartH;
         });
         const highestLabelTop = Math.min(...labelTops);
-        // Horizontal connecting line, gap above the highest label's visible top
-        const connY = highestLabelTop - s.gaLineGap;
+        const connY = highestLabelTop - gaLineGap;
 
-        // Growth % label centred above the connecting line
         g.append("text").attr("class", "growth-label")
-          .attr("x", cx).attr("y", connY - s.gaFontSize * 0.6)
-          .style("font-size", `${s.gaFontSize}px`)
-          .attr("fill", s.gaLabelColor)
+          .attr("x", cx).attr("y", connY - gaFontSize * 0.6)
+          .style("font-size", `${gaFontSize}px`)
+          .attr("fill", hc ? hcFg : gaLabelColor)
           .text(fmtPct(growth));
 
-        // Connecting line with vertical drops to each bar's total-label area
         if (years.length >= 2) {
           const xA = ga.barX[years[0]], xB = ga.barX[years[years.length - 1]];
           const tA = ga.barTop[years[0]], tB = ga.barTop[years[years.length - 1]];
 
           if (xA != null && xB != null && tA != null && tB != null && tA < chartH && tB < chartH) {
-            const dash = s.gaLineStyle === "solid" ? "none" : s.gaLineStyle === "dotted" ? "2,4" : "6,4";
+            const dash = gaLineStyle === "solid" ? "none" : gaLineStyle === "dotted" ? "2,4" : "6,4";
             const lineGen = d3.line<[number, number]>().x(d => d[0]).y(d => d[1]);
-
-            // Vertical drops start just above each total label (barTop − 20 ≈ label top)
             const pts: [number, number][] = [
-              [xA, tA - 20], [xA, connY], [xB, connY], [xB, tB - 20]
+              [xA, tA - 20], [xA, connY], [xB, connY], [xB, tB - 20],
             ];
 
             g.append("path").attr("d", lineGen(pts))
-              .attr("stroke", s.gaLineColor).attr("stroke-width", 2)
+              .attr("stroke", hc ? hcFg : gaLineColor)
+              .attr("stroke-width", 2)
               .attr("stroke-dasharray", dash).attr("fill", "none");
 
-            if (s.gaShowDots) {
+            if (gaShowDots) {
               for (const pt of [pts[0], pts[3]]) {
                 g.append("circle").attr("cx", pt[0]).attr("cy", pt[1])
-                  .attr("r", 3).attr("fill", s.gaDotColor);
+                  .attr("r", 3).attr("fill", hc ? hcFg : gaDotColor);
               }
             }
           }
@@ -551,27 +552,28 @@ export class Visual implements IVisual {
       }
     }
 
-    // ---- legend ----
-    if (s.lgShow) this.drawLegend(g, locations, locColor, chartW, chartH);
+    // ---- Legend ----
+    if (lgShow) {
+      this.drawLegend(g, locations, locColor, chartW, chartH, lgPosition, lgFontSize, lgTitle, hc, hcFg);
+    }
   }
 
   /* ================================================================ */
-  /*  drawLegend — native Power BI style                                */
+  /*  drawLegend — native Power BI style with official constants        */
   /* ================================================================ */
 
   private drawLegend(
     g: d3.Selection<SVGGElement, unknown, null, undefined>,
     locations: string[],
     colorScale: d3.ScaleOrdinal<string, string>,
-    chartW: number, chartH: number
+    chartW: number, chartH: number,
+    position: string, fontSize: number, title: string,
+    hc: boolean, hcFg: string,
   ): void {
-    const s = this.s;
-    const isTop = s.lgPosition.startsWith("Top");
+    const isTop = position.startsWith("Top");
 
-    // Fluent Design spacing:
-    // Top: legend sits in the margin area, ~8px below Power BI title
-    // Bottom: legend sits below X-axis category labels (chartH+44), no overlap
-    const yPos = isTop ? -18 : chartH + 46;
+    // Fluent Design spacing using official constants
+    const yPos = isTop ? -(TOP_LEGEND_HEIGHT - 6) : chartH + 46;
 
     const legendG = g.append("g").attr("class", "legend")
       .attr("transform", `translate(0, ${yPos})`);
@@ -579,54 +581,55 @@ export class Visual implements IVisual {
     // Measure text widths
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    const baseItemW = 26;  // circle diameter + gap
+    const baseItemW = LEGEND_ICON_RADIUS * 2 + 6 + LEGEND_EDGE_MARGIN;
     let maxTextW = 0;
     if (ctx) {
-      ctx.font = `${s.lgFontSize}px "Segoe UI", sans-serif`;
+      ctx.font = `${fontSize}px "Segoe UI", sans-serif`;
       for (const loc of locations) {
         const tw = ctx.measureText(loc).width;
         if (tw > maxTextW) maxTextW = tw;
       }
     }
     const itemW = baseItemW + maxTextW + 16;
-
-    // Title width if present
-    const titleW = s.lgTitle ? (ctx ? ctx.measureText(s.lgTitle).width + 12 : 60) : 0;
+    const titleW = title ? (ctx ? ctx.measureText(title).width + 12 : 60) : 0;
     const totalW = locations.length * itemW + titleW;
 
-    // Horizontal alignment based on position suffix
+    // Horizontal alignment
     let startX = 0;
-    if (s.lgPosition.endsWith("Center")) {
+    if (position.endsWith("Center")) {
       startX = Math.max(0, (chartW - totalW) / 2);
-    } else if (s.lgPosition.endsWith("Right")) {
+    } else if (position.endsWith("Right")) {
       startX = Math.max(0, chartW - totalW);
     }
 
-    // Draw title if provided
+    // Title
     let offsetX = startX;
-    if (s.lgTitle) {
+    if (title) {
       legendG.append("text")
         .attr("x", offsetX).attr("y", 10)
-        .style("font-size", `${s.lgFontSize}px`)
+        .style("font-size", `${fontSize}px`)
         .style("font-weight", "600")
-        .text(s.lgTitle);
+        .style("fill", hc ? hcFg : undefined)
+        .text(title);
       offsetX += titleW;
     }
 
-    // Draw legend items with circular markers
+    // Legend items with circular markers (matching official chartutils icon radius)
     const items = legendG.selectAll(".legend-item")
       .data(locations).enter().append("g").attr("class", "legend-item")
       .attr("transform", (_, i) => `translate(${offsetX + i * itemW}, 0)`);
 
-    // Circular marker
     items.append("circle")
-      .attr("cx", 6).attr("cy", 7).attr("r", 5)
-      .attr("fill", d => colorScale(d));
+      .attr("cx", LEGEND_ICON_RADIUS + 1)
+      .attr("cy", 7)
+      .attr("r", LEGEND_ICON_RADIUS)
+      .attr("fill", d => hc ? hcFg : colorScale(d));
 
-    // Label text
     items.append("text")
-      .attr("x", 16).attr("y", 11)
-      .style("font-size", `${s.lgFontSize}px`)
+      .attr("x", LEGEND_ICON_RADIUS * 2 + 6)
+      .attr("y", 11)
+      .style("font-size", `${fontSize}px`)
+      .style("fill", hc ? hcFg : undefined)
       .text(d => d);
   }
 }

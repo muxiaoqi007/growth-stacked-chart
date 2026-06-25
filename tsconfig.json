@@ -15,6 +15,6 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "types": ["d3"]
   },
-  "files": ["src/visual.ts"],
+  "files": ["src/visual.ts", "src/settings.ts"],
   "exclude": ["node_modules", "dist"]
 }

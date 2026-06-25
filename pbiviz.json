@@ -4,7 +4,7 @@
     "displayName": "Growth Stacked Chart",
     "guid": "growthStackedChart1A2B3C4D5E",
     "visualClassName": "Visual",
-    "version": "1.0.6.0",
+    "version": "1.0.8.0",
     "description": "Grouped stacked bar chart with segment percentage/value labels, growth rate annotations and connecting lines. Ideal for year-over-year comparison across categories.",
     "supportUrl": "https://github.com/powerbi-visuals",
     "gitHubUrl": ""

@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "d3": "^7.9.0",
+    "powerbi-visuals-utils-chartutils": "^8.3.0",
+    "powerbi-visuals-utils-colorutils": "^6.0.6",
+    "powerbi-visuals-utils-formattingmodel": "^7.0.0",
     "powerbi-visuals-utils-tooltiputils": "^6.0.4"
   },
   "devDependencies": {
