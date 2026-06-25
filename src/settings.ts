@@ -1,46 +1,11 @@
 /*
  * GrowthStackedChart — Formatting Settings Model (Modern API)
  * Replaces enumerateObjectInstances with getFormattingModel().
- * Follows powerbi-visuals-utils-formattingmodel v7 patterns.
+ * Uses AutoDropdown (not ItemDropdown) for enum properties —
+ * dropdown items come from capabilities.json, values are plain strings.
  */
 
 import { formattingSettings } from "powerbi-visuals-utils-formattingmodel";
-
-/* ================================================================== */
-/*  Shared enum members                                                */
-/* ================================================================== */
-
-const valueFormatItems = [
-  { value: "short", displayName: "Short (1.2M)" },
-  { value: "full", displayName: "Full (1,234,567)" },
-];
-
-const lineStyleItems = [
-  { value: "dashed", displayName: "Dashed" },
-  { value: "solid", displayName: "Solid" },
-  { value: "dotted", displayName: "Dotted" },
-];
-
-const legendPositionItems = [
-  { value: "TopLeft", displayName: "Top Left" },
-  { value: "TopCenter", displayName: "Top Center" },
-  { value: "TopRight", displayName: "Top Right" },
-  { value: "BottomLeft", displayName: "Bottom Left" },
-  { value: "BottomCenter", displayName: "Bottom Center" },
-  { value: "BottomRight", displayName: "Bottom Right" },
-];
-
-const yearOrderItems = [
-  { value: "asc", displayName: "Ascending (A → Z)" },
-  { value: "desc", displayName: "Descending (Z → A)" },
-  { value: "data", displayName: "Data Order" },
-];
-
-const stackOrderItems = [
-  { value: "data", displayName: "Data Order" },
-  { value: "asc", displayName: "Ascending by Value" },
-  { value: "desc", displayName: "Descending by Value" },
-];
 
 /* ================================================================== */
 /*  Card: X-Axis                                                       */
@@ -125,10 +90,9 @@ export class DataLabelsCard extends formattingSettings.SimpleCard {
   minSegmentHeight = new formattingSettings.NumUpDown({
     name: "minSegmentHeight", displayName: "Min Segment Height (px)", value: 18,
   } as formattingSettings.NumUpDown);
-  valueFormat = new formattingSettings.ItemDropdown({
-    name: "valueFormat", displayName: "Value Format",
-    value: valueFormatItems[1], items: valueFormatItems,
-  } as formattingSettings.ItemDropdown);
+  valueFormat = new formattingSettings.AutoDropdown({
+    name: "valueFormat", displayName: "Value Format", value: "full",
+  } as formattingSettings.AutoDropdown);
 
   slices = [this.show, this.showPercentage, this.showValue, this.showTotal, this.fontSize, this.minSegmentHeight, this.valueFormat];
 }
@@ -156,10 +120,9 @@ export class GrowthAnnotationCard extends formattingSettings.SimpleCard {
   fontSize = new formattingSettings.NumUpDown({
     name: "fontSize", displayName: "Label Font Size", value: 14,
   } as formattingSettings.NumUpDown);
-  lineStyle = new formattingSettings.ItemDropdown({
-    name: "lineStyle", displayName: "Line Style",
-    value: lineStyleItems[0], items: lineStyleItems,
-  } as formattingSettings.ItemDropdown);
+  lineStyle = new formattingSettings.AutoDropdown({
+    name: "lineStyle", displayName: "Line Style", value: "dashed",
+  } as formattingSettings.AutoDropdown);
   lineGap = new formattingSettings.NumUpDown({
     name: "lineGap", displayName: "Gap Above Bars (px)", value: 28,
   } as formattingSettings.NumUpDown);
@@ -181,10 +144,9 @@ export class LegendCard extends formattingSettings.SimpleCard {
   show = new formattingSettings.ToggleSwitch({
     name: "show", displayName: "Show", value: true,
   } as formattingSettings.ToggleSwitch);
-  position = new formattingSettings.ItemDropdown({
-    name: "position", displayName: "Position",
-    value: legendPositionItems[0], items: legendPositionItems,
-  } as formattingSettings.ItemDropdown);
+  position = new formattingSettings.AutoDropdown({
+    name: "position", displayName: "Position", value: "TopLeft",
+  } as formattingSettings.AutoDropdown);
   fontSize = new formattingSettings.NumUpDown({
     name: "fontSize", displayName: "Font Size", value: 11,
   } as formattingSettings.NumUpDown);
@@ -203,14 +165,12 @@ export class SortSettingsCard extends formattingSettings.SimpleCard {
   name = "sortSettings";
   displayName = "Sort Order";
 
-  yearOrder = new formattingSettings.ItemDropdown({
-    name: "yearOrder", displayName: "Sub-Category Order",
-    value: yearOrderItems[0], items: yearOrderItems,
-  } as formattingSettings.ItemDropdown);
-  stackOrder = new formattingSettings.ItemDropdown({
-    name: "stackOrder", displayName: "Stack Order",
-    value: stackOrderItems[0], items: stackOrderItems,
-  } as formattingSettings.ItemDropdown);
+  yearOrder = new formattingSettings.AutoDropdown({
+    name: "yearOrder", displayName: "Sub-Category Order", value: "asc",
+  } as formattingSettings.AutoDropdown);
+  stackOrder = new formattingSettings.AutoDropdown({
+    name: "stackOrder", displayName: "Stack Order", value: "data",
+  } as formattingSettings.AutoDropdown);
 
   slices = [this.yearOrder, this.stackOrder];
 }
