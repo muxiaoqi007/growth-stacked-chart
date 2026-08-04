@@ -1,0 +1,19 @@
+{
+  "Visual_DataRole_Group": "类别",
+  "Visual_DataRole_Year": "子类别",
+  "Visual_DataRole_Location": "堆叠分段",
+  "Visual_DataRole_Value": "值",
+  "Visual_Object_XAxis": "X 轴",
+  "Visual_Object_YAxis": "Y 轴",
+  "Visual_Object_DataLabels": "数据标签",
+  "Visual_Object_GrowthAnnotation": "增长率标注",
+  "Visual_Object_Legend": "图例",
+  "Visual_Object_SortSettings": "排序",
+  "Visual_Object_ColorPalette": "堆叠颜色",
+  "Visual_TotalLabel": "总计",
+  "Visual_ShareLabel": "占比",
+  "Visual_GrowthLabel": "增长",
+  "Visual_LandingTitle": "增长堆叠图",
+  "Visual_LandingDescription": "请添加类别、子类别、堆叠分段和值字段，以生成带增长率标注的分组堆叠条形图。",
+  "Visual_AriaDescription": "带增长率标注的分组堆叠条形图"
+}

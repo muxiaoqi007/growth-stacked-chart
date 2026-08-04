@@ -1,15 +1,17 @@
-const fs = require("fs");
-const path = require("path");
+const { existsSync, mkdirSync, copyFileSync } = require("fs");
+const { resolve, join, relative } = require("path");
 
-const apiVersion = "v5.9.0";
-const source = path.resolve(__dirname, "..", "node_modules", "powerbi-visuals-api", "schema.capabilities.json");
-const targetDir = path.resolve(__dirname, "..", ".api", apiVersion);
-const target = path.join(targetDir, "schema.capabilities.json");
+// The schema must match the apiVersion declared in pbiviz.json.
+const pbiviz = require("../pbiviz.json");
+const apiVersion = `v${pbiviz.apiVersion}`;
+const source = resolve(__dirname, "..", "node_modules", "powerbi-visuals-api", "schema.capabilities.json");
+const targetDir = resolve(__dirname, "..", ".api", apiVersion);
+const target = join(targetDir, "schema.capabilities.json");
 
-if (!fs.existsSync(source)) {
+if (!existsSync(source)) {
   throw new Error(`Missing Power BI capabilities schema: ${source}`);
 }
 
-fs.mkdirSync(targetDir, { recursive: true });
-fs.copyFileSync(source, target);
-console.log(`Prepared Power BI API schema: ${path.relative(process.cwd(), target)}`);
+mkdirSync(targetDir, { recursive: true });
+copyFileSync(source, target);
+console.log(`Prepared Power BI API schema: ${relative(process.cwd(), target)}`);

@@ -1,0 +1,19 @@
+{
+  "Visual_DataRole_Group": "Category",
+  "Visual_DataRole_Year": "Sub-Category",
+  "Visual_DataRole_Location": "Stack Segment",
+  "Visual_DataRole_Value": "Value",
+  "Visual_Object_XAxis": "X-Axis",
+  "Visual_Object_YAxis": "Y-Axis",
+  "Visual_Object_DataLabels": "Data Labels",
+  "Visual_Object_GrowthAnnotation": "Growth Annotation",
+  "Visual_Object_Legend": "Legend",
+  "Visual_Object_SortSettings": "Sort Order",
+  "Visual_Object_ColorPalette": "Stack Colors",
+  "Visual_TotalLabel": "Total",
+  "Visual_ShareLabel": "Share",
+  "Visual_GrowthLabel": "Growth",
+  "Visual_LandingTitle": "Growth Stacked Chart",
+  "Visual_LandingDescription": "Add Category, Sub-Category, Stack Segment and Value fields to build a grouped stacked bar chart with growth annotations.",
+  "Visual_AriaDescription": "Grouped stacked bar chart with growth annotations"
+}

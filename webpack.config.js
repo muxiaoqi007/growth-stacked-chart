@@ -2,6 +2,9 @@ const path = require("path");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const { PowerBICustomVisualsWebpackPlugin } = require("powerbi-visuals-webpack-plugin");
 
+// pbiviz.json is the single source of truth for the visual metadata.
+const pbiviz = require("./pbiviz.json");
+
 module.exports = (env, argv) => {
   const isProduction = argv.mode === "production";
 
@@ -12,7 +15,7 @@ module.exports = (env, argv) => {
       filename: "visual.js",
       library: {
         type: "umd",
-        name: "powerbi.custom visuals.GrowthStackedChart"
+        name: `powerbi.custom visuals.${pbiviz.visual.name}`
       },
       globalObject: "this"
     },
@@ -41,21 +44,17 @@ module.exports = (env, argv) => {
         filename: "visual.css"
       }),
       new PowerBICustomVisualsWebpackPlugin({
-        visual: {
-          name: "GrowthStackedChart",
-          displayName: "Growth Stacked Chart",
-          guid: "growthStackedChart1A2B3C4D5E",
-          visualClassName: "Visual",
-          version: "1.0.0",
-          description: "Grouped stacked bar chart with growth annotations",
-          supportUrl: "",
-          gitHubUrl: ""
-        },
-        apiVersion: "5.9.0",
-        author: { name: "QoderWork", email: "" },
-        assets: { icon: "assets/icon.png" },
-        style: "style/visual.less",
-        capabilities: "capabilities.json"
+        visual: pbiviz.visual,
+        apiVersion: pbiviz.apiVersion,
+        author: pbiviz.author,
+        assets: pbiviz.assets,
+        style: pbiviz.style,
+        capabilities: pbiviz.capabilities,
+        stringResources: pbiviz.stringResources || [],
+        devMode: !isProduction,
+        generateResources: true,
+        generatePbiviz: true,
+        packageOutPath: path.resolve(__dirname, "dist")
       })
     ],
     devtool: isProduction ? false : "source-map",

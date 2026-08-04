@@ -7,7 +7,9 @@ Grouped stacked bar chart with segment percentage/value labels, growth rate anno
 - Stacked bars with percentage and absolute value labels
 - Auto-calculated growth rate annotations with dashed connecting lines
 - Configurable format pane (X/Y axis, data labels, growth annotation, legend, sort order, colors)
-- Tooltip support
+- Tooltips, selection / cross-filtering, context menu
+- Landing page, accessibility (aria labels + keyboard focus), high contrast mode
+- Localization (en-US, zh-CN) and respect for model format strings
 - Up to 10 stack segments with customizable color palette
 
 ## Data Fields
@@ -21,18 +23,35 @@ Grouped stacked bar chart with segment percentage/value labels, growth rate anno
 
 ## Build
 
+Requires [powerbi-visuals-tools](https://www.npmjs.com/package/powerbi-visuals-tools):
+
 ```bash
+npm install -g powerbi-visuals-tools
 npm install
-npx pbiviz package
+npm run package
 ```
 
 Output: `dist/*.pbiviz`
 
+A standalone webpack build (no global CLI) is also available: `npm run build`.
+
+## Quality checks
+
+```bash
+npm run lint    # eslint with eslint-plugin-powerbi-visuals
+npm audit       # must report no high/moderate vulnerabilities
+```
+
+## Compatibility
+
+Built against Power BI visuals API **5.9.0**, compatible with current Power BI Desktop and Power BI service releases.
+
 ## Install in Power BI
 
-1. Open Power BI Desktop
-2. Visualizations pane > "..." > "Import a visual from a file"
-3. Select the `.pbiviz` file from `dist/`
+1. Download the latest `.pbiviz` file from the [Releases page](../../releases) (or build it yourself, see above)
+2. Open Power BI Desktop
+3. Visualizations pane > "..." > "Import a visual from a file"
+4. Select the `.pbiviz` file
 
 ## License
 

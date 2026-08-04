@@ -1,7 +1,8 @@
 /*
- * GrowthStackedChart — Power BI Custom Visual v8
+ * GrowthStackedChart — Power BI Custom Visual
  * Modern API: getFormattingModel + rendering events + ColorHelper
- * Built with D3.js v7 + powerbi-visuals-api 5.9.0
+ * Selection / context menu / localization / accessibility / landing page
+ * Built with D3.js v7 + powerbi-visuals-api 5.11
  */
 
 import powerbi from "powerbi-visuals-api";
@@ -14,18 +15,24 @@ import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import DataView = powerbi.DataView;
 import FormattingModel = powerbi.visuals.FormattingModel;
 import IVisualEventService = powerbi.extensibility.IVisualEventService;
+import ISelectionManager = powerbi.extensibility.ISelectionManager;
+import ISelectionId = powerbi.visuals.ISelectionId;
+import ILocalizationManager = powerbi.extensibility.ILocalizationManager;
 
 import { FormattingSettingsService } from "powerbi-visuals-utils-formattingmodel";
 import { VisualFormattingSettingsModel } from "./settings";
 import { ColorHelper } from "powerbi-visuals-utils-colorutils";
 import { createTooltipServiceWrapper, ITooltipServiceWrapper } from "powerbi-visuals-utils-tooltiputils";
+import { valueFormatter } from "powerbi-visuals-utils-formattingutils";
 import "../style/visual.less";
+
+type IValueFormatter = ReturnType<typeof valueFormatter.create>;
 
 /* ================================================================== */
 /*  Data interfaces                                                     */
 /* ================================================================== */
 
-interface SegmentDatum { location: string; value: number; }
+interface SegmentDatum { location: string; value: number; selectionId: ISelectionId; }
 interface BarDatum { group: string; year: string; segments: SegmentDatum[]; total: number; }
 interface GroupAggregate {
   group: string; years: string[];
@@ -39,7 +46,8 @@ interface GroupAggregate {
 
 const LEGEND_HEIGHT = 14;
 const LEGEND_ICON_RADIUS = 5;
-const LEGEND_EDGE_MARGIN = 10;
+const LEGEND_ICON_TEXT_GAP = 6;  // icon -> its label
+const LEGEND_ITEM_GAP = 15;      // between consecutive items (native PBI-like)
 const TOP_LEGEND_Y = 6;
 const TOP_PLOT_MARGIN = 32;
 const BOTTOM_LEGEND_GAP = 10;
@@ -58,16 +66,28 @@ function textColorFor(hex: string): string {
   const rgb = c.rgb();
   return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) > 140 ? "#333" : "#fff";
 }
-function fmtFull(n: number): string { return d3.format(",")(Math.round(n)); }
-function fmtShort(n: number): string {
-  const a = Math.abs(n);
-  if (a >= 1e9) return (n / 1e9).toFixed(1) + "B";
-  if (a >= 1e6) return (n / 1e6).toFixed(1) + "M";
-  if (a >= 1e4) return (n / 1e3).toFixed(1) + "K";
-  return d3.format(",")(Math.round(n));
-}
-function fmtNum(n: number, mode: string): string { return mode === "short" ? fmtShort(n) : fmtFull(n); }
 function fmtPct(n: number): string { return (n >= 0 ? "+" : "") + n.toFixed(1) + "%"; }
+
+/** Word-wrapping that also handles CJK text (no spaces between words). */
+function wrapText(text: string, maxChars: number): string[] {
+  const lines: string[] = [];
+  let current = "";
+  for (const word of text.split(" ")) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+    while (current.length > maxChars) {
+      lines.push(current.slice(0, maxChars));
+      current = current.slice(maxChars);
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
 
 /* -- Settings accessor helpers for FormattingSettingsModel ---------- */
 
@@ -108,6 +128,11 @@ export class Visual implements IVisual {
   private events: IVisualEventService;
   private lastDataView: DataView | undefined;
 
+  private selectionManager: ISelectionManager;
+  private localizationManager: ILocalizationManager;
+  private allowInteractions = true;
+  private measureFormat: string | undefined;
+
   constructor(options: VisualConstructorOptions) {
     this.host = options.host;
     this.tooltipService = createTooltipServiceWrapper(
@@ -121,6 +146,36 @@ export class Visual implements IVisual {
     this.formattingModel = new VisualFormattingSettingsModel();
     this.colorHelper = new ColorHelper(this.host.colorPalette);
     this.events = options.host.eventService;
+
+    // Selection & localization
+    this.selectionManager = this.host.createSelectionManager();
+    this.localizationManager = this.host.createLocalizationManager();
+    this.allowInteractions = this.host.hostCapabilities?.allowInteractions ?? true;
+
+    // Click on an empty plot area clears the selection
+    this.svg.on("click", () => {
+      if (!this.allowInteractions) return;
+      this.selectionManager.clear().then(() => this.updateSelectionStyle());
+    });
+    // Context menu on an empty plot area
+    this.svg.on("contextmenu", (event: MouseEvent) => {
+      event.preventDefault();
+      if (!this.allowInteractions) return;
+      const emptyId = this.host.createSelectionIdBuilder().createSelectionId();
+      this.selectionManager.showContextMenu(emptyId, { x: event.clientX, y: event.clientY });
+    });
+  }
+
+  /* ================================================================ */
+  /*  Localization helper                                              */
+  /* ================================================================ */
+
+  private loc(key: string, fallback: string): string {
+    try {
+      return this.localizationManager.getDisplayName(key) || fallback;
+    } catch {
+      return fallback;
+    }
   }
 
   /* ================================================================ */
@@ -160,7 +215,7 @@ export class Visual implements IVisual {
 
       const bars = this.parseData(this.lastDataView);
       if (!bars.length) {
-        this.svg.selectAll("*").remove();
+        this.renderLandingPage(width, height);
         this.events.renderingFinished(options);
         return;
       }
@@ -187,6 +242,10 @@ export class Visual implements IVisual {
     const iV = vals.findIndex(v => v.source.roles?.["value"]);
     if (iG < 0 || iY < 0 || iL < 0 || iV < 0) return [];
 
+    // Respect the format string defined in the data model
+    this.measureFormat = vals[iV].source.format;
+    const measureQueryName = vals[iV].source.queryName;
+
     const n = cats[iG].values.length;
     const map = new Map<string, BarDatum>();
     for (let r = 0; r < n; r++) {
@@ -197,7 +256,15 @@ export class Visual implements IVisual {
       const key = `${grp}||${yr}`;
       if (!map.has(key)) map.set(key, { group: grp, year: yr, segments: [], total: 0 });
       const bar = map.get(key)!;
-      bar.segments.push({ location: loc, value: val });
+
+      const selectionId = this.host.createSelectionIdBuilder()
+        .withCategory(cats[iG], r)
+        .withCategory(cats[iY], r)
+        .withCategory(cats[iL], r)
+        .withMeasure(measureQueryName)
+        .createSelectionId();
+
+      bar.segments.push({ location: loc, value: val, selectionId });
       bar.total += val;
     }
     return Array.from(map.values());
@@ -243,6 +310,86 @@ export class Visual implements IVisual {
       ? (totals.get(a) || 0) - (totals.get(b) || 0)
       : (totals.get(b) || 0) - (totals.get(a) || 0));
     return arr;
+  }
+
+  /* ================================================================ */
+  /*  Selection helpers                                                 */
+  /* ================================================================ */
+
+  private onSegmentClick(event: MouseEvent, seg: SegmentDatum): void {
+    if (!this.allowInteractions) return;
+    event.stopPropagation();
+    this.selectionManager
+      .select(seg.selectionId, event.ctrlKey || event.metaKey)
+      .then(() => this.updateSelectionStyle());
+  }
+
+  private onSegmentKeyDown(event: KeyboardEvent, seg: SegmentDatum): void {
+    if (!this.allowInteractions) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      event.stopPropagation();
+      this.selectionManager
+        .select(seg.selectionId, event.ctrlKey || event.metaKey)
+        .then(() => this.updateSelectionStyle());
+    }
+  }
+
+  private onSegmentContextMenu(event: MouseEvent, seg: SegmentDatum): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!this.allowInteractions) return;
+    this.selectionManager.showContextMenu(seg.selectionId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+  }
+
+  private updateSelectionStyle(): void {
+    const selected = this.selectionManager.getSelectionIds() as ISelectionId[];
+    const hasSelection = selected.length > 0;
+    this.svg.selectAll<SVGRectElement, SegmentDatum>(".bar-rect")
+      .style("opacity", (d) =>
+        !hasSelection || selected.some((id) => id.equals(d.selectionId)) ? null : 0.4
+      );
+  }
+
+  /* ================================================================ */
+  /*  Landing page (shown while the visual has no data)                 */
+  /* ================================================================ */
+
+  private renderLandingPage(width: number, height: number): void {
+    this.svg.selectAll("*").remove();
+    this.svg.attr("width", width).attr("height", height)
+      .attr("role", "img")
+      .attr("aria-label", this.loc("Visual_LandingTitle", "Growth Stacked Chart"));
+
+    const hc = this.colorHelper.isHighContrast;
+    const titleColor = hc ? this.colorHelper.getHighContrastColor("foreground", "#323130") : "#323130";
+    const textColor = hc ? this.colorHelper.getHighContrastColor("foreground", "#605E5C") : "#605E5C";
+
+    const title = this.loc("Visual_LandingTitle", "Growth Stacked Chart");
+    const desc = this.loc(
+      "Visual_LandingDescription",
+      "Add Category, Sub-Category, Stack Segment and Value fields to build the chart."
+    );
+
+    const g = this.svg.append("g").attr("class", "landing-page");
+    g.append("text")
+      .attr("x", width / 2).attr("y", height / 2 - 12)
+      .attr("text-anchor", "middle")
+      .style("font-size", "14px").style("font-weight", "600")
+      .style("fill", titleColor)
+      .text(title);
+
+    wrapText(desc, 48).forEach((line, i) => {
+      g.append("text")
+        .attr("x", width / 2).attr("y", height / 2 + 10 + i * 16)
+        .attr("text-anchor", "middle")
+        .style("font-size", "11px")
+        .style("fill", textColor)
+        .text(line);
+    });
   }
 
   /* ================================================================ */
@@ -330,15 +477,43 @@ export class Visual implements IVisual {
     const chartH = height - margin.top - margin.bottom;
     if (chartW < 60 || chartH < 60) return;
 
-    const maxTotal = d3.max(bars, b => b.total) || 1;
-    const mag = Math.pow(10, Math.floor(Math.log10(maxTotal)));
-    const yMax = Math.ceil(maxTotal / mag) * mag || maxTotal * 1.1;
+    // Value range (supports negative totals as well)
+    const maxTotal = d3.max(bars, b => b.total) || 0;
+    const minTotal = d3.min(bars, b => b.total) || 0;
+    let yMax = 1;
+    if (maxTotal > 0) {
+      const mag = Math.pow(10, Math.floor(Math.log10(maxTotal)));
+      yMax = Math.ceil(maxTotal / mag) * mag;
+    }
+    const yMin = Math.min(0, minTotal);
 
     const x0 = d3.scaleBand().domain(groups).range([0, chartW]).paddingInner(0.25).paddingOuter(0.15);
     const x1 = d3.scaleBand().domain(years).range([0, x0.bandwidth()]).paddingInner(0.12);
-    const y  = d3.scaleLinear().domain([0, yMax]).nice().range([chartH, 0]);
+    const y  = d3.scaleLinear().domain([yMin, yMax]).nice().range([chartH, 0]);
+
+    // Value formatters honour the measure's format string from the model
+    const plainFmt: IValueFormatter = valueFormatter.create({
+      format: this.measureFormat, allowFormatBeautification: true,
+    });
+    const shortFmt: IValueFormatter = valueFormatter.create({
+      value: Math.max(Math.abs(yMax), Math.abs(yMin), 1),
+      format: this.measureFormat, allowFormatBeautification: true,
+    });
+    const axisFmt = yShortFormat ? shortFmt : plainFmt;
+    const labelFmt: IValueFormatter = dlValueFormat === "short"
+      ? valueFormatter.create({
+          value: Math.max(Math.abs(maxTotal), 1),
+          format: this.measureFormat, allowFormatBeautification: true,
+        })
+      : plainFmt;
 
     const g = this.svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Accessibility: name the chart for assistive technologies
+    this.svg
+      .attr("role", "img")
+      .attr("aria-label", `${this.loc("Visual_AriaDescription", "Grouped stacked bar chart")}. ` +
+        `${groups.length} x ${years.length} x ${locations.length}`);
 
     // ---- Grid ----
     if (yGridLines) {
@@ -377,11 +552,8 @@ export class Visual implements IVisual {
 
     // ---- Y axis ----
     if (yShow) {
-      const fmt = yShortFormat
-        ? (d: d3.NumberValue) => fmtShort(Number(d))
-        : (d: d3.NumberValue) => d3.format(",")(d);
       const yAx = g.append("g").attr("class", "axis")
-        .call(d3.axisLeft(y).ticks(5).tickFormat(fmt));
+        .call(d3.axisLeft(y).ticks(5).tickFormat(d => axisFmt.format(Number(d))));
       yAx.select(".domain").attr("stroke", hc ? hcFg : "#ccc");
       yAx.selectAll("text")
         .style("font-size", `${yFontSize}px`)
@@ -410,6 +582,8 @@ export class Visual implements IVisual {
     }));
 
     const tooltipSvc = this.tooltipService;
+    const totalLabel = this.loc("Visual_TotalLabel", "Total");
+    const shareLabel = this.loc("Visual_ShareLabel", "Share");
 
     // ---- Bars ----
     for (const ga of groupAggs) {
@@ -436,28 +610,35 @@ export class Visual implements IVisual {
           const loc = layer.key;
           if (!loc) continue;
           const seg = segMap.get(loc);
-          if (!seg || seg.value <= 0) continue;
+          if (!seg || seg.value === 0) continue;
 
           const y0v = layer[0][0], y1v = layer[0][1];
-          const segH = y(y0v) - y(y1v);
+          const top = Math.min(y(y0v), y(y1v));
+          const segH = Math.abs(y(y0v) - y(y1v));
           const fillColor = hc ? hcBg : locColor(loc);
 
           const rect = barG.append("rect")
+            .datum(seg)
             .attr("class", "bar-rect")
+            .attr("tabindex", 0)
+            .attr("aria-label", `${ga.group} / ${yr} / ${loc}: ${plainFmt.format(seg.value)}`)
             .attr("x", 0).attr("width", bw)
-            .attr("y", y(y1v)).attr("height", Math.max(segH, 0))
+            .attr("y", top).attr("height", Math.max(segH, 0))
             .attr("fill", fillColor)
             .attr("stroke", hc ? hcFg : "none")
-            .attr("stroke-width", hc ? 1 : 0);
+            .attr("stroke-width", hc ? 1 : 0)
+            .on("click", (event: MouseEvent) => this.onSegmentClick(event, seg))
+            .on("contextmenu", (event: MouseEvent) => this.onSegmentContextMenu(event, seg))
+            .on("keydown", (event: KeyboardEvent) => this.onSegmentKeyDown(event, seg));
 
           // Tooltip
           tooltipSvc.addTooltip(
             d3.select(rect.node()),
             () => [
               { displayName: `${ga.group} / ${yr}`, value: "" },
-              { displayName: loc, value: fmtFull(seg.value) },
-              { displayName: "Total", value: fmtFull(bar.total) },
-              { displayName: "Share", value: `${(seg.value / bar.total * 100).toFixed(1)}%` },
+              { displayName: loc, value: plainFmt.format(seg.value) },
+              { displayName: totalLabel, value: plainFmt.format(bar.total) },
+              { displayName: shareLabel, value: bar.total !== 0 ? `${(seg.value / bar.total * 100).toFixed(1)}%` : "" },
             ],
             () => null
           );
@@ -465,9 +646,9 @@ export class Visual implements IVisual {
           // Segment labels
           if (dlShow && segH >= dlMinHeight) {
             const tc = hc ? hcFg : textColorFor(locColor(loc));
-            const midY = (y(y1v) + y(y0v)) / 2;
+            const midY = top + segH / 2;
             const cls = `segment-label ${tc === "#333" ? "segment-label-dark" : ""}`;
-            if (dlShowPct) {
+            if (dlShowPct && bar.total !== 0) {
               barG.append("text").attr("class", cls)
                 .attr("x", bw / 2)
                 .attr("y", midY - (dlShowVal ? 6 : 0))
@@ -478,23 +659,23 @@ export class Visual implements IVisual {
             if (dlShowVal) {
               barG.append("text").attr("class", cls)
                 .attr("x", bw / 2)
-                .attr("y", midY + (dlShowPct ? 8 : 0))
+                .attr("y", midY + (dlShowPct && bar.total !== 0 ? 8 : 0))
                 .attr("dy", "0.35em")
                 .style("font-size", `${dlFontSize}px`)
-                .text(fmtNum(seg.value, dlValueFormat));
+                .text(labelFmt.format(seg.value));
             }
           }
         }
 
         // Total label above bar
-        const barTopY = y(bar.total);
+        const barTopY = y(Math.max(bar.total, 0));
         ga.barTop[yr] = barTopY;
 
         if (dlShow && dlShowTotal) {
           barG.append("text").attr("class", "total-label")
             .attr("x", bw / 2).attr("y", barTopY - 8)
             .style("fill", hc ? hcFg : undefined)
-            .text(fmtNum(bar.total, dlValueFormat));
+            .text(labelFmt.format(bar.total));
         }
 
         // Year label below bar
@@ -565,6 +746,9 @@ export class Visual implements IVisual {
     if (lgShow) {
       this.drawLegend(g, locations, locColor, chartW, chartH, lgPosition, lgFontSize, lgTitle, margin.top, hc, hcFg);
     }
+
+    // Apply current cross-filter selection state to the freshly rendered bars
+    this.updateSelectionStyle();
   }
 
   /* ================================================================ */
@@ -591,23 +775,26 @@ export class Visual implements IVisual {
     const legendG = g.append("g").attr("class", "legend")
       .attr("transform", `translate(0, ${yPos})`);
 
-    // Measure text widths
+    // Measure each item's text width individually so items pack tightly
+    // (native Power BI style: uniform gap between items, not equal-width slots)
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    const baseItemW = LEGEND_ICON_RADIUS * 2 + 6 + LEGEND_EDGE_MARGIN;
-    let maxTextW = 0;
     if (ctx) {
-      ctx.font = `${fontSize}px "Segoe UI", sans-serif`;
-      for (const loc of locations) {
-        const tw = ctx.measureText(loc).width;
-        if (tw > maxTextW) maxTextW = tw;
-      }
+      ctx.font = `${fontSize}px "Segoe UI", "Microsoft YaHei", sans-serif`;
     }
-    const itemW = baseItemW + maxTextW + 16;
-    const titleW = title ? (ctx ? ctx.measureText(title).width + 12 : 60) : 0;
-    const totalW = locations.length * itemW + titleW;
+    const measure = (s: string) => ctx
+      ? ctx.measureText(s).width
+      : s.length * fontSize; // CJK-safe fallback: ~1em per char
 
-    // Horizontal alignment
+    const iconW = LEGEND_ICON_RADIUS * 2 + LEGEND_ICON_TEXT_GAP;
+    const textWidths = locations.map(measure);
+    const itemsW = locations.reduce(
+      (sum, _, i) => sum + iconW + textWidths[i], 0
+    ) + LEGEND_ITEM_GAP * Math.max(0, locations.length - 1);
+    const titleW = title ? measure(title) + LEGEND_ITEM_GAP : 0;
+    const totalW = titleW + itemsW;
+
+    // Horizontal alignment of the whole row
     let startX = 0;
     if (position.endsWith("Center")) {
       startX = Math.max(0, (chartW - totalW) / 2);
@@ -627,22 +814,36 @@ export class Visual implements IVisual {
       offsetX += titleW;
     }
 
-    // Legend items with circular markers (matching official chartutils icon radius)
-    const items = legendG.selectAll(".legend-item")
-      .data(locations).enter().append("g").attr("class", "legend-item")
-      .attr("transform", (_, i) => `translate(${offsetX + i * itemW}, 0)`);
+    // Legend items with circular markers, placed at cumulative x positions
+    let x = offsetX;
+    locations.forEach((loc, i) => {
+      const itemG = legendG.append("g").attr("class", "legend-item")
+        .attr("transform", `translate(${x}, 0)`);
 
-    items.append("circle")
-      .attr("cx", LEGEND_ICON_RADIUS + 1)
-      .attr("cy", 7)
-      .attr("r", LEGEND_ICON_RADIUS)
-      .attr("fill", d => hc ? hcFg : colorScale(d));
+      itemG.append("circle")
+        .attr("cx", LEGEND_ICON_RADIUS)
+        .attr("cy", 7)
+        .attr("r", LEGEND_ICON_RADIUS)
+        .attr("fill", hc ? hcFg : colorScale(loc));
 
-    items.append("text")
-      .attr("x", LEGEND_ICON_RADIUS * 2 + 6)
-      .attr("y", 11)
-      .style("font-size", `${fontSize}px`)
-      .style("fill", hc ? hcFg : undefined)
-      .text(d => d);
+      itemG.append("text")
+        .attr("x", iconW)
+        .attr("y", 11)
+        .style("font-size", `${fontSize}px`)
+        .style("fill", hc ? hcFg : undefined)
+        .text(loc);
+
+      x += iconW + textWidths[i] + LEGEND_ITEM_GAP;
+    });
+  }
+
+  /* ================================================================ */
+  /*  destroy                                                           */
+  /* ================================================================ */
+
+  public destroy(): void {
+    this.svg.on("click", null);
+    this.svg.on("contextmenu", null);
+    this.root.selectAll("*").remove();
   }
 }
