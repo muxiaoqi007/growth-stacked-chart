@@ -27,6 +27,13 @@
       "name": "value",
       "kind": "Measure",
       "description": "Numeric value for each segment"
+    },
+    {
+      "displayName": "Tooltips",
+      "displayNameKey": "Visual_DataRole_Tooltips",
+      "name": "tooltips",
+      "kind": "Measure",
+      "description": "Additional measures shown in the tooltip"
     }
   ],
   "dataViewMappings": [
@@ -36,7 +43,8 @@
           "group": { "max": 1 },
           "year": { "max": 1 },
           "location": { "max": 1 },
-          "value": { "max": 1 }
+          "value": { "max": 1 },
+          "tooltips": { "max": 5 }
         }
       ],
       "categorical": {
@@ -50,7 +58,8 @@
         },
         "values": {
           "select": [
-            { "for": { "in": "value" } }
+            { "for": { "in": "value" } },
+            { "for": { "in": "tooltips" } }
           ]
         }
       }
@@ -399,7 +408,16 @@
   "sorting": {
     "custom": {}
   },
-  "tooltips": {},
+  "tooltips": {
+    "supportedTypes": {
+      "default": true,
+      "canvas": true
+    },
+    "roles": [
+      "tooltips"
+    ],
+    "supportEnhancedTooltips": true
+  },
   "supportsLandingPage": true,
   "supportsKeyboardFocus": true,
   "supportsMultiVisualSelection": true,

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.0.0 — 2026-08-05
+
+Standard tooltip support, aligned with native visuals.
+
+### Added
+
+- **Tooltips field bucket** (new "Tooltips" data role, up to 5 measures): extra measures added there appear as additional rows in the tooltip, formatted with their own model format strings
+- Report page tooltip support (`supportedTypes.canvas`) — hovering passes the data point identity (selectionId) so report-page tooltips and drill actions work
+- Modern (enhanced) tooltips enabled (`supportEnhancedTooltips`)
+
 ## 1.3.0.0 — 2026-08-05
 
 ### Added

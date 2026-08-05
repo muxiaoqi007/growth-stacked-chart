@@ -3,6 +3,7 @@
   "Visual_DataRole_Year": "子类别",
   "Visual_DataRole_Location": "堆叠分段",
   "Visual_DataRole_Value": "值",
+  "Visual_DataRole_Tooltips": "工具提示",
   "Visual_Object_XAxis": "X 轴",
   "Visual_Object_YAxis": "Y 轴",
   "Visual_Object_DataLabels": "数据标签",

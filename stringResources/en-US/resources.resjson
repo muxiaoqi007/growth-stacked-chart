@@ -3,6 +3,7 @@
   "Visual_DataRole_Year": "Sub-Category",
   "Visual_DataRole_Location": "Stack Segment",
   "Visual_DataRole_Value": "Value",
+  "Visual_DataRole_Tooltips": "Tooltips",
   "Visual_Object_XAxis": "X-Axis",
   "Visual_Object_YAxis": "Y-Axis",
   "Visual_Object_DataLabels": "Data Labels",

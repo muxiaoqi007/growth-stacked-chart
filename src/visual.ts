@@ -32,7 +32,12 @@ type IValueFormatter = ReturnType<typeof valueFormatter.create>;
 /*  Data interfaces                                                     */
 /* ================================================================== */
 
-interface SegmentDatum { location: string; value: number; selectionId: ISelectionId; }
+interface SegmentDatum {
+  location: string;
+  value: number;
+  selectionId: ISelectionId;
+  tooltips: { displayName: string; value: string }[];
+}
 interface BarDatum { group: string; year: string; segments: SegmentDatum[]; total: number; }
 interface GroupAggregate {
   group: string; years: string[];
@@ -305,6 +310,15 @@ export class Visual implements IVisual {
     this.measureFormat = vals[iV].source.format;
     const measureQueryName = vals[iV].source.queryName;
 
+    // Standard "Tooltips" field bucket: extra measures shown in the tooltip
+    const ttCols = vals
+      .filter(v => v.source.roles?.["tooltips"])
+      .map(v => ({
+        name: v.source.displayName,
+        values: v.values,
+        fmt: valueFormatter.create({ format: v.source.format, allowFormatBeautification: true }),
+      }));
+
     const n = cats[iG].values.length;
     const map = new Map<string, BarDatum>();
     for (let r = 0; r < n; r++) {
@@ -323,7 +337,12 @@ export class Visual implements IVisual {
         .withMeasure(measureQueryName)
         .createSelectionId();
 
-      bar.segments.push({ location: loc, value: val, selectionId });
+      const tooltipRows = ttCols.map(t => {
+        const raw = Number(t.values[r]);
+        return { displayName: t.name, value: isFinite(raw) ? t.fmt.format(raw) : "" };
+      });
+
+      bar.segments.push({ location: loc, value: val, selectionId, tooltips: tooltipRows });
       bar.total += val;
     }
     return Array.from(map.values());
@@ -738,8 +757,9 @@ export class Visual implements IVisual {
                 { displayName: loc, value: plainFmt.format(seg.value) },
                 { displayName: totalLabel, value: plainFmt.format(bar.total) },
                 { displayName: shareLabel, value: bar.total !== 0 ? `${(seg.value / bar.total * 100).toFixed(1)}%` : "" },
+                ...seg.tooltips,
               ],
-              () => null
+              () => seg.selectionId
             );
           }
 
