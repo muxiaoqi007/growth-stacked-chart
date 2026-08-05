@@ -8,60 +8,149 @@
 import { formattingSettings } from "powerbi-visuals-utils-formattingmodel";
 
 /* ================================================================== */
-/*  Card: X-Axis                                                       */
+/*  Card: X-Axis (native-style: Values / Title groups)                 */
 /* ================================================================== */
 
-export class XAxisCard extends formattingSettings.SimpleCard {
+export class XAxisCard extends formattingSettings.CompositeCard {
   name = "xAxis";
   displayName = "X-Axis";
+  displayNameKey = "Visual_Object_XAxis";
 
   show = new formattingSettings.ToggleSwitch({
-    name: "show", displayName: "Show", value: true,
+    name: "show", displayName: "Show", displayNameKey: "Visual_Slice_Show", value: true,
   } as formattingSettings.ToggleSwitch);
-  title = new formattingSettings.TextInput({
-    name: "title", displayName: "Title", value: "", placeholder: "",
-  } as formattingSettings.TextInput);
+
   fontSize = new formattingSettings.NumUpDown({
-    name: "fontSize", displayName: "Category Font Size", value: 11,
+    name: "fontSize", displayName: "Category Font Size", displayNameKey: "Visual_Slice_FontSize", value: 11,
   } as formattingSettings.NumUpDown);
   fontColor = new formattingSettings.ColorPicker({
-    name: "fontColor", displayName: "Font Color", value: { value: "#555555" },
+    name: "fontColor", displayName: "Font Color", displayNameKey: "Visual_Slice_FontColor", value: { value: "#555555" },
   } as formattingSettings.ColorPicker);
   yearLabelSize = new formattingSettings.NumUpDown({
-    name: "yearLabelSize", displayName: "Sub-Category Font Size", value: 11,
+    name: "yearLabelSize", displayName: "Sub-Category Font Size", displayNameKey: "Visual_Slice_YearLabelSize", value: 11,
   } as formattingSettings.NumUpDown);
 
-  slices = [this.show, this.title, this.fontSize, this.fontColor, this.yearLabelSize];
+  titleShow = new formattingSettings.ToggleSwitch({
+    name: "titleShow", displayName: "Show Title", displayNameKey: "Visual_Slice_ShowTitle", value: false,
+  } as formattingSettings.ToggleSwitch);
+  titleText = new formattingSettings.TextInput({
+    name: "titleText", displayName: "Title Text", displayNameKey: "Visual_Slice_TitleText", value: "", placeholder: "",
+  } as formattingSettings.TextInput);
+  titleFontSize = new formattingSettings.NumUpDown({
+    name: "titleFontSize", displayName: "Title Font Size", displayNameKey: "Visual_Slice_TitleFontSize", value: 12,
+  } as formattingSettings.NumUpDown);
+  titleFontColor = new formattingSettings.ColorPicker({
+    name: "titleFontColor", displayName: "Title Font Color", displayNameKey: "Visual_Slice_TitleFontColor", value: { value: "#555555" },
+  } as formattingSettings.ColorPicker);
+
+  topLevelSlice = this.show;
+  groups = [
+    new formattingSettings.Group({
+      name: "xAxisValues",
+      displayName: "Values",
+      displayNameKey: "Visual_Group_Values",
+      collapsible: true,
+      slices: [this.fontSize, this.fontColor, this.yearLabelSize],
+    }),
+    new formattingSettings.Group({
+      name: "xAxisTitle",
+      displayName: "Title",
+      displayNameKey: "Visual_Group_Title",
+      collapsible: true,
+      topLevelSlice: this.titleShow,
+      slices: [this.titleText, this.titleFontSize, this.titleFontColor],
+    }),
+  ];
 }
 
 /* ================================================================== */
-/*  Card: Y-Axis                                                       */
+/*  Card: Y-Axis (native-style: Range / Values / Title groups)         */
 /* ================================================================== */
 
-export class YAxisCard extends formattingSettings.SimpleCard {
+export class YAxisCard extends formattingSettings.CompositeCard {
   name = "yAxis";
   displayName = "Y-Axis";
+  displayNameKey = "Visual_Object_YAxis";
 
   show = new formattingSettings.ToggleSwitch({
-    name: "show", displayName: "Show", value: true,
-  } as formattingSettings.ToggleSwitch);
-  title = new formattingSettings.TextInput({
-    name: "title", displayName: "Title", value: "", placeholder: "",
-  } as formattingSettings.TextInput);
-  fontSize = new formattingSettings.NumUpDown({
-    name: "fontSize", displayName: "Font Size", value: 11,
-  } as formattingSettings.NumUpDown);
-  fontColor = new formattingSettings.ColorPicker({
-    name: "fontColor", displayName: "Font Color", value: { value: "#666666" },
-  } as formattingSettings.ColorPicker);
-  shortFormat = new formattingSettings.ToggleSwitch({
-    name: "shortFormat", displayName: "Short Format (K/M/B)", value: true,
-  } as formattingSettings.ToggleSwitch);
-  gridLines = new formattingSettings.ToggleSwitch({
-    name: "gridLines", displayName: "Grid Lines", value: true,
+    name: "show", displayName: "Show", displayNameKey: "Visual_Slice_Show", value: true,
   } as formattingSettings.ToggleSwitch);
 
-  slices = [this.show, this.title, this.fontSize, this.fontColor, this.shortFormat, this.gridLines];
+  // Range group
+  minimum = new formattingSettings.NumUpDown({
+    name: "minimum", displayName: "Minimum", displayNameKey: "Visual_Slice_Minimum",
+    value: null, placeholder: "Auto",
+  } as unknown as formattingSettings.NumUpDown);
+  maximum = new formattingSettings.NumUpDown({
+    name: "maximum", displayName: "Maximum", displayNameKey: "Visual_Slice_Maximum",
+    value: null, placeholder: "Auto",
+  } as unknown as formattingSettings.NumUpDown);
+  logScale = new formattingSettings.ToggleSwitch({
+    name: "logScale", displayName: "Log Scale", displayNameKey: "Visual_Slice_LogScale", value: false,
+  } as formattingSettings.ToggleSwitch);
+  reverseRange = new formattingSettings.ToggleSwitch({
+    name: "reverseRange", displayName: "Reverse Range", displayNameKey: "Visual_Slice_ReverseRange", value: false,
+  } as formattingSettings.ToggleSwitch);
+  roundRange = new formattingSettings.ToggleSwitch({
+    name: "roundRange", displayName: "Round Range", displayNameKey: "Visual_Slice_RoundRange", value: true,
+  } as formattingSettings.ToggleSwitch);
+  gridLines = new formattingSettings.ToggleSwitch({
+    name: "gridLines", displayName: "Grid Lines", displayNameKey: "Visual_Slice_GridLines", value: true,
+  } as formattingSettings.ToggleSwitch);
+
+  // Values group
+  displayUnits = new formattingSettings.AutoDropdown({
+    name: "displayUnits", displayName: "Display Units", displayNameKey: "Visual_Slice_DisplayUnits", value: "auto",
+  } as formattingSettings.AutoDropdown);
+  decimalPlaces = new formattingSettings.AutoDropdown({
+    name: "decimalPlaces", displayName: "Decimal Places", displayNameKey: "Visual_Slice_DecimalPlaces", value: "auto",
+  } as formattingSettings.AutoDropdown);
+  fontSize = new formattingSettings.NumUpDown({
+    name: "fontSize", displayName: "Font Size", displayNameKey: "Visual_Slice_FontSize", value: 11,
+  } as formattingSettings.NumUpDown);
+  fontColor = new formattingSettings.ColorPicker({
+    name: "fontColor", displayName: "Font Color", displayNameKey: "Visual_Slice_FontColor", value: { value: "#666666" },
+  } as formattingSettings.ColorPicker);
+
+  // Title group
+  titleShow = new formattingSettings.ToggleSwitch({
+    name: "titleShow", displayName: "Show Title", displayNameKey: "Visual_Slice_ShowTitle", value: false,
+  } as formattingSettings.ToggleSwitch);
+  titleText = new formattingSettings.TextInput({
+    name: "titleText", displayName: "Title Text", displayNameKey: "Visual_Slice_TitleText", value: "", placeholder: "",
+  } as formattingSettings.TextInput);
+  titleFontSize = new formattingSettings.NumUpDown({
+    name: "titleFontSize", displayName: "Title Font Size", displayNameKey: "Visual_Slice_TitleFontSize", value: 12,
+  } as formattingSettings.NumUpDown);
+  titleFontColor = new formattingSettings.ColorPicker({
+    name: "titleFontColor", displayName: "Title Font Color", displayNameKey: "Visual_Slice_TitleFontColor", value: { value: "#666666" },
+  } as formattingSettings.ColorPicker);
+
+  topLevelSlice = this.show;
+  groups = [
+    new formattingSettings.Group({
+      name: "yAxisRange",
+      displayName: "Range",
+      displayNameKey: "Visual_Group_Range",
+      collapsible: true,
+      slices: [this.minimum, this.maximum, this.logScale, this.reverseRange, this.roundRange, this.gridLines],
+    }),
+    new formattingSettings.Group({
+      name: "yAxisValues",
+      displayName: "Values",
+      displayNameKey: "Visual_Group_Values",
+      collapsible: true,
+      slices: [this.displayUnits, this.decimalPlaces, this.fontSize, this.fontColor],
+    }),
+    new formattingSettings.Group({
+      name: "yAxisTitle",
+      displayName: "Title",
+      displayNameKey: "Visual_Group_Title",
+      collapsible: true,
+      topLevelSlice: this.titleShow,
+      slices: [this.titleText, this.titleFontSize, this.titleFontColor],
+    }),
+  ];
 }
 
 /* ================================================================== */

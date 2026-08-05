@@ -139,6 +139,11 @@ function dd(card: Record<string, unknown>, key: string, fb: string): string {
   const s = card[key] as { value?: string } | undefined;
   return s?.value ?? fb;
 }
+function numAuto(card: Record<string, unknown>, key: string): number | null {
+  const s = card[key] as { value?: number | null } | undefined;
+  const v = s?.value;
+  return typeof v === "number" && isFinite(v) ? v : null;
+}
 
 /* ================================================================== */
 /*  Visual                                                              */
@@ -204,6 +209,32 @@ export class Visual implements IVisual {
     } catch {
       return fallback;
     }
+  }
+
+  /* ================================================================ */
+  /*  Axis tick formatter (display units + decimal places)             */
+  /* ================================================================ */
+
+  private buildAxisTickFormatter(units: string, decimals: string, anchor: number): (v: number) => string {
+    const parsed = parseInt(decimals, 10);
+    const dp = decimals !== "auto" && !isNaN(parsed) ? Math.max(0, Math.min(4, parsed)) : undefined;
+
+    if (units === "none") {
+      const f = valueFormatter.create({ format: this.measureFormat, precision: dp });
+      return (v) => f.format(v);
+    }
+    if (units === "auto") {
+      const f = valueFormatter.create({ value: anchor, format: this.measureFormat, precision: dp });
+      return (v) => f.format(v);
+    }
+    // Forced display unit: scale the value and append the unit suffix
+    const unit = Number(units);
+    const suffix = unit >= 1e9 ? "bn" : unit >= 1e6 ? "M" : "K";
+    return (v) => {
+      let s = (v / unit).toFixed(dp ?? 2);
+      if (s.indexOf(".") >= 0) s = s.replace(/0+$/, "").replace(/\.$/, "");
+      return s + suffix;
+    };
   }
 
   /* ================================================================ */
@@ -438,17 +469,31 @@ export class Visual implements IVisual {
 
     // Read all settings via helpers
     const xShow = bool(xC, "show", true);
-    const xTitle = txt(xC, "title", "");
     const xFontSize = num(xC, "fontSize", 11);
     const xFontColor = clr(xC, "fontColor", "#555555");
     const xYearSize = num(xC, "yearLabelSize", 11);
+    const xTitleShow = bool(xC, "titleShow", false);
+    const xTitleText = txt(xC, "titleText", "");
+    const xTitleFontSize = num(xC, "titleFontSize", 12);
+    const xTitleFontColor = clr(xC, "titleFontColor", "#555555");
+    const xTitle = xTitleShow ? xTitleText : "";
 
     const yShow = bool(yC, "show", true);
-    const yTitle = txt(yC, "title", "");
+    const yGridLines = bool(yC, "gridLines", true);
+    const yMinSetting = numAuto(yC, "minimum");
+    const yMaxSetting = numAuto(yC, "maximum");
+    const yLogScale = bool(yC, "logScale", false);
+    const yReverse = bool(yC, "reverseRange", false);
+    const yRound = bool(yC, "roundRange", true);
+    const yDisplayUnits = dd(yC, "displayUnits", "auto");
+    const yDecimalPlaces = dd(yC, "decimalPlaces", "auto");
     const yFontSize = num(yC, "fontSize", 11);
     const yFontColor = clr(yC, "fontColor", "#666666");
-    const yShortFormat = bool(yC, "shortFormat", true);
-    const yGridLines = bool(yC, "gridLines", true);
+    const yTitleShow = bool(yC, "titleShow", false);
+    const yTitleText = txt(yC, "titleText", "");
+    const yTitleFontSize = num(yC, "titleFontSize", 12);
+    const yTitleFontColor = clr(yC, "titleFontColor", "#666666");
+    const yTitle = yTitleShow ? yTitleText : "";
 
     const dlShow = bool(dlC, "show", true);
     const dlShowPct = bool(dlC, "showPercentage", true);
@@ -514,27 +559,49 @@ export class Visual implements IVisual {
       const mag = Math.pow(10, Math.floor(Math.log10(maxTotal)));
       yMax = Math.ceil(maxTotal / mag) * mag;
     }
-    const yMin = Math.min(0, minTotal);
+    let yMin = Math.min(0, minTotal);
+
+    // Range group: user overrides
+    if (yMaxSetting !== null && yMaxSetting > yMin) yMax = yMaxSetting;
+    if (yMinSetting !== null && yMinSetting < yMax) yMin = yMinSetting;
+
+    // Log scale requires an entirely positive range; pick an automatic
+    // positive floor when the minimum is left on Auto.
+    let useLog = yLogScale;
+    if (useLog) {
+      const allPositive = bars.every(b => b.segments.every(s => s.value > 0));
+      const positives = bars.flatMap(b => b.segments.map(s => s.value)).filter(v => v > 0);
+      const minPositive = positives.length ? Math.min(...positives) : NaN;
+      if (!allPositive || !isFinite(minPositive)) {
+        useLog = false;
+      } else {
+        if (yMinSetting === null) yMin = Math.min(1, minPositive);
+        if (yMin <= 0 || yMax <= yMin) useLog = false;
+      }
+    }
 
     const x0 = d3.scaleBand().domain(groups).range([0, chartW]).paddingInner(0.25).paddingOuter(0.15);
     const x1 = d3.scaleBand().domain(years).range([0, x0.bandwidth()]).paddingInner(0.12);
-    const y  = d3.scaleLinear().domain([yMin, yMax]).nice().range([chartH, 0]);
+    const yRange: [number, number] = yReverse ? [0, chartH] : [chartH, 0];
+    const y = useLog
+      ? (() => { const s = d3.scaleLog().domain([yMin, yMax]).range(yRange); if (yRound) s.nice(); return s; })()
+      : (() => { const s = d3.scaleLinear().domain([yMin, yMax]).range(yRange); if (yRound) s.nice(); return s; })();
+    // Log domains cannot map 0 — clamp cumulative stack values to the floor
+    const py = (v: number) => y(useLog ? Math.max(v, yMin) : v);
 
     // Value formatters honour the measure's format string from the model
     const plainFmt: IValueFormatter = valueFormatter.create({
       format: this.measureFormat, allowFormatBeautification: true,
     });
-    const shortFmt: IValueFormatter = valueFormatter.create({
-      value: Math.max(Math.abs(yMax), Math.abs(yMin), 1),
-      format: this.measureFormat, allowFormatBeautification: true,
-    });
-    const axisFmt = yShortFormat ? shortFmt : plainFmt;
     const labelFmt: IValueFormatter = dlValueFormat === "short"
       ? valueFormatter.create({
           value: Math.max(Math.abs(maxTotal), 1),
           format: this.measureFormat, allowFormatBeautification: true,
         })
       : plainFmt;
+    const axisTickFmt = this.buildAxisTickFormatter(
+      yDisplayUnits, yDecimalPlaces, Math.max(Math.abs(yMax), Math.abs(yMin), 1)
+    );
 
     const g = this.svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -572,8 +639,8 @@ export class Visual implements IVisual {
         g.append("text")
           .attr("x", chartW / 2).attr("y", chartH + X_TITLE_Y)
           .attr("text-anchor", "middle")
-          .style("font-size", `${xFontSize + 1}px`)
-          .style("fill", hc ? hcFg : xFontColor)
+          .style("font-size", `${xTitleFontSize}px`)
+          .style("fill", hc ? hcFg : xTitleFontColor)
           .text(xTitle);
       }
     }
@@ -581,7 +648,7 @@ export class Visual implements IVisual {
     // ---- Y axis ----
     if (yShow) {
       const yAx = g.append("g").attr("class", "axis")
-        .call(d3.axisLeft(y).ticks(5).tickFormat(d => axisFmt.format(Number(d))));
+        .call(d3.axisLeft(y).ticks(5).tickFormat(d => axisTickFmt(Number(d))));
       yAx.select(".domain").attr("stroke", hc ? hcFg : "#ccc");
       yAx.selectAll("text")
         .style("font-size", `${yFontSize}px`)
@@ -590,8 +657,8 @@ export class Visual implements IVisual {
         yAx.append("text").attr("transform", "rotate(-90)")
           .attr("x", -chartH / 2).attr("y", -60)
           .attr("text-anchor", "middle")
-          .style("font-size", `${yFontSize + 1}px`)
-          .style("fill", hc ? hcFg : yFontColor)
+          .style("font-size", `${yTitleFontSize}px`)
+          .style("fill", hc ? hcFg : yTitleFontColor)
           .text(yTitle);
       }
     }
@@ -641,8 +708,8 @@ export class Visual implements IVisual {
           if (!seg || seg.value === 0) continue;
 
           const y0v = layer[0][0], y1v = layer[0][1];
-          const top = Math.min(y(y0v), y(y1v));
-          const segH = Math.abs(y(y0v) - y(y1v));
+          const top = Math.min(py(y0v), py(y1v));
+          const segH = Math.abs(py(y0v) - py(y1v));
           const fillColor = hc ? hcBg : locColor(loc);
 
           const rect = barG.append("rect")
@@ -696,7 +763,7 @@ export class Visual implements IVisual {
         }
 
         // Total label above bar
-        const barTopY = y(Math.max(bar.total, 0));
+        const barTopY = py(Math.max(bar.total, 0));
         ga.barTop[yr] = barTopY;
 
         if (dlShow && dlShowTotal) {

@@ -63,23 +63,43 @@
       "properties": {
         "show": {
           "displayName": "Show",
+          "displayNameKey": "Visual_Slice_Show",
           "type": { "bool": true }
-        },
-        "title": {
-          "displayName": "Title",
-          "type": { "text": true }
         },
         "fontSize": {
           "displayName": "Category Font Size",
+          "displayNameKey": "Visual_Slice_FontSize",
           "type": { "numeric": true }
         },
         "fontColor": {
           "displayName": "Font Color",
+          "displayNameKey": "Visual_Slice_FontColor",
           "type": { "fill": { "solid": { "color": true } } }
         },
         "yearLabelSize": {
           "displayName": "Sub-Category Font Size",
+          "displayNameKey": "Visual_Slice_YearLabelSize",
           "type": { "numeric": true }
+        },
+        "titleShow": {
+          "displayName": "Show Title",
+          "displayNameKey": "Visual_Slice_ShowTitle",
+          "type": { "bool": true }
+        },
+        "titleText": {
+          "displayName": "Title Text",
+          "displayNameKey": "Visual_Slice_TitleText",
+          "type": { "text": true }
+        },
+        "titleFontSize": {
+          "displayName": "Title Font Size",
+          "displayNameKey": "Visual_Slice_TitleFontSize",
+          "type": { "numeric": true }
+        },
+        "titleFontColor": {
+          "displayName": "Title Font Color",
+          "displayNameKey": "Visual_Slice_TitleFontColor",
+          "type": { "fill": { "solid": { "color": true } } }
         }
       }
     },
@@ -89,28 +109,95 @@
       "properties": {
         "show": {
           "displayName": "Show",
-          "type": { "bool": true }
-        },
-        "title": {
-          "displayName": "Title",
-          "type": { "text": true }
-        },
-        "fontSize": {
-          "displayName": "Font Size",
-          "type": { "numeric": true }
-        },
-        "fontColor": {
-          "displayName": "Font Color",
-          "type": { "fill": { "solid": { "color": true } } }
-        },
-        "shortFormat": {
-          "displayName": "Short Format (K/M/B)",
-          "description": "Display 1,000,000 as 1M",
+          "displayNameKey": "Visual_Slice_Show",
           "type": { "bool": true }
         },
         "gridLines": {
           "displayName": "Grid Lines",
+          "displayNameKey": "Visual_Slice_GridLines",
           "type": { "bool": true }
+        },
+        "minimum": {
+          "displayName": "Minimum",
+          "displayNameKey": "Visual_Slice_Minimum",
+          "type": { "numeric": true }
+        },
+        "maximum": {
+          "displayName": "Maximum",
+          "displayNameKey": "Visual_Slice_Maximum",
+          "type": { "numeric": true }
+        },
+        "logScale": {
+          "displayName": "Log Scale",
+          "displayNameKey": "Visual_Slice_LogScale",
+          "type": { "bool": true }
+        },
+        "reverseRange": {
+          "displayName": "Reverse Range",
+          "displayNameKey": "Visual_Slice_ReverseRange",
+          "type": { "bool": true }
+        },
+        "roundRange": {
+          "displayName": "Round Range",
+          "displayNameKey": "Visual_Slice_RoundRange",
+          "type": { "bool": true }
+        },
+        "displayUnits": {
+          "displayName": "Display Units",
+          "displayNameKey": "Visual_Slice_DisplayUnits",
+          "type": {
+            "enumeration": [
+              { "value": "auto", "displayName": "Auto" },
+              { "value": "none", "displayName": "None" },
+              { "value": "1000", "displayName": "Thousands" },
+              { "value": "1000000", "displayName": "Millions" },
+              { "value": "1000000000", "displayName": "Billions" }
+            ]
+          }
+        },
+        "decimalPlaces": {
+          "displayName": "Decimal Places",
+          "displayNameKey": "Visual_Slice_DecimalPlaces",
+          "type": {
+            "enumeration": [
+              { "value": "auto", "displayName": "Auto" },
+              { "value": "0", "displayName": "0" },
+              { "value": "1", "displayName": "1" },
+              { "value": "2", "displayName": "2" },
+              { "value": "3", "displayName": "3" },
+              { "value": "4", "displayName": "4" }
+            ]
+          }
+        },
+        "fontSize": {
+          "displayName": "Font Size",
+          "displayNameKey": "Visual_Slice_FontSize",
+          "type": { "numeric": true }
+        },
+        "fontColor": {
+          "displayName": "Font Color",
+          "displayNameKey": "Visual_Slice_FontColor",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "titleShow": {
+          "displayName": "Show Title",
+          "displayNameKey": "Visual_Slice_ShowTitle",
+          "type": { "bool": true }
+        },
+        "titleText": {
+          "displayName": "Title Text",
+          "displayNameKey": "Visual_Slice_TitleText",
+          "type": { "text": true }
+        },
+        "titleFontSize": {
+          "displayName": "Title Font Size",
+          "displayNameKey": "Visual_Slice_TitleFontSize",
+          "type": { "numeric": true }
+        },
+        "titleFontColor": {
+          "displayName": "Title Font Color",
+          "displayNameKey": "Visual_Slice_TitleFontColor",
+          "type": { "fill": { "solid": { "color": true } } }
         }
       }
     },

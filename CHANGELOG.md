@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0.0 — 2026-08-05
+
+Format pane restructured to follow the native Power BI axis settings (per standard chart spec).
+
+### Added
+
+- Y-Axis **Range** group: Minimum / Maximum (Auto by default), Log Scale, Reverse Range, Round Range, Grid Lines
+- Y-Axis **Values** group: Display Units (Auto/None/Thousands/Millions/Billions), Decimal Places (Auto/0–4), font size & color
+- X-Axis / Y-Axis **Title** groups with their own show toggle, title text, font size and color
+- Localized group/slice names (en-US, zh-CN) for all axis settings
+
+### Changed
+
+- X-Axis and Y-Axis cards are now composite cards with collapsible groups (native pane layout)
+- Axis titles are off by default and driven by the Title group toggle (replaces the old free-text title behavior)
+- Replaced the old "Short Format (K/M/B)" Y-axis toggle with standard Display Units + Decimal Places
+
 ## 1.1.1.0 — 2026-08-05
 
 ### Changed
