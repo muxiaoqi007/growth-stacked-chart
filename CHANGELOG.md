@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1.0 — 2026-08-05
+
+### Changed
+
+- X-axis label layout now matches native Power BI density: sub-category labels sit close to the axis line, category labels follow on a tighter second row, and the bottom margin adapts to the actual label rows (plot area gains back ~6-20px)
+- Category labels use normal font weight and default size 11 (was bold 12), consistent with native visuals
+- Long category labels are ellipsized to their group slot width instead of overflowing into neighbors
+- Growth-annotation drop lines start higher so they no longer touch the total labels above bars
+
 ## 1.1.0.0 — 2026-08-04
 
 Certification-readiness release. Targets Power BI visuals API 5.9.0.

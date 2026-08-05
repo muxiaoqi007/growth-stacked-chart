@@ -22,7 +22,7 @@ export class XAxisCard extends formattingSettings.SimpleCard {
     name: "title", displayName: "Title", value: "", placeholder: "",
   } as formattingSettings.TextInput);
   fontSize = new formattingSettings.NumUpDown({
-    name: "fontSize", displayName: "Category Font Size", value: 12,
+    name: "fontSize", displayName: "Category Font Size", value: 11,
   } as formattingSettings.NumUpDown);
   fontColor = new formattingSettings.ColorPicker({
     name: "fontColor", displayName: "Font Color", value: { value: "#555555" },

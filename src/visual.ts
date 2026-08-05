@@ -57,6 +57,34 @@ const PALETTE = [
   "#4A90D9", "#8B5CF6", "#E88BC5", "#38BDF8", "#F97316", "#14B8A6",
 ];
 
+/* Native Power BI-like X-axis label geometry (tight rows under the axis) */
+const X_YEAR_LABEL_Y = 15;    // sub-category row baseline below axis line
+const X_CAT_LABEL_Y = 32;     // category row baseline below axis line
+const X_TITLE_Y = 50;         // axis title baseline below axis line
+const X_AXIS_H = 38;          // bottom space needed without a title
+const X_AXIS_H_TITLE = 56;    // bottom space needed with a title
+
+/* Shared canvas context for text measurement (CJK-safe) */
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+function measureText(text: string, fontSize: number): number {
+  if (measureCtx === undefined) {
+    measureCtx = document.createElement("canvas").getContext("2d");
+  }
+  if (measureCtx) {
+    measureCtx.font = `${fontSize}px "Segoe UI", "Microsoft YaHei", sans-serif`;
+    return measureCtx.measureText(text).width;
+  }
+  return text.length * fontSize; // fallback: ~1em per char
+}
+function truncateText(text: string, fontSize: number, maxWidth: number): string {
+  if (measureText(text, fontSize) <= maxWidth) return text;
+  let t = text;
+  while (t.length > 1 && measureText(`${t}…`, fontSize) > maxWidth) {
+    t = t.slice(0, -1);
+  }
+  return `${t}…`;
+}
+
 /* ================================================================== */
 /*  Helpers                                                             */
 /* ================================================================== */
@@ -411,7 +439,7 @@ export class Visual implements IVisual {
     // Read all settings via helpers
     const xShow = bool(xC, "show", true);
     const xTitle = txt(xC, "title", "");
-    const xFontSize = num(xC, "fontSize", 12);
+    const xFontSize = num(xC, "fontSize", 11);
     const xFontColor = clr(xC, "fontColor", "#555555");
     const xYearSize = num(xC, "yearLabelSize", 11);
 
@@ -467,10 +495,11 @@ export class Visual implements IVisual {
     // the top edge of the SVG and plot area follows tightly below it.
     const isTop = lgShow && lgPosition.startsWith("Top");
     const isBottom = lgShow && lgPosition.startsWith("Bottom");
+    const xAxisH = !xShow ? 10 : (xTitle ? X_AXIS_H_TITLE : X_AXIS_H);
     const margin = {
       top: isTop ? TOP_PLOT_MARGIN : 24,
       right: 30,
-      bottom: 44 + (isBottom ? LEGEND_HEIGHT + BOTTOM_LEGEND_GAP + 8 : 0),
+      bottom: xAxisH + (isBottom ? LEGEND_HEIGHT + BOTTOM_LEGEND_GAP + 8 : 0),
       left: 80,
     };
     const chartW = width - margin.left - margin.right;
@@ -529,20 +558,19 @@ export class Visual implements IVisual {
       g.append("line").attr("x1", 0).attr("x2", chartW)
         .attr("y1", chartH).attr("y2", chartH)
         .attr("stroke", hc ? hcFg : "#ccc");
+      const catMaxW = x0.step() - 6; // keep category labels inside their group slot
       for (const grp of groups) {
         g.append("text")
           .attr("x", (x0(grp) ?? 0) + x0.bandwidth() / 2)
-          .attr("y", chartH + 44)
+          .attr("y", chartH + X_CAT_LABEL_Y)
           .attr("text-anchor", "middle")
           .style("font-size", `${xFontSize}px`)
-          .style("font-weight", "600")
           .style("fill", hc ? hcFg : xFontColor)
-          .text(grp);
+          .text(truncateText(grp, xFontSize, catMaxW));
       }
       if (xTitle) {
-        const titleY = !isTop && lgShow ? chartH + 30 : chartH + 62;
         g.append("text")
-          .attr("x", chartW / 2).attr("y", titleY)
+          .attr("x", chartW / 2).attr("y", chartH + X_TITLE_Y)
           .attr("text-anchor", "middle")
           .style("font-size", `${xFontSize + 1}px`)
           .style("fill", hc ? hcFg : xFontColor)
@@ -681,7 +709,7 @@ export class Visual implements IVisual {
         // Year label below bar
         if (xShow) {
           barG.append("text").attr("class", "year-label")
-            .attr("x", bw / 2).attr("y", chartH + 18)
+            .attr("x", bw / 2).attr("y", chartH + X_YEAR_LABEL_Y)
             .style("font-size", `${xYearSize}px`)
             .style("fill", hc ? hcFg : undefined)
             .attr("text-anchor", "middle").text(yr);
@@ -723,7 +751,7 @@ export class Visual implements IVisual {
             const dash = gaLineStyle === "solid" ? "none" : gaLineStyle === "dotted" ? "2,4" : "6,4";
             const lineGen = d3.line<[number, number]>().x(d => d[0]).y(d => d[1]);
             const pts: [number, number][] = [
-              [xA, tA - 20], [xA, connY], [xB, connY], [xB, tB - 20],
+              [xA, tA - 24], [xA, connY], [xB, connY], [xB, tB - 24],
             ];
 
             g.append("path").attr("d", lineGen(pts))
