@@ -207,36 +207,43 @@
       "properties": {
         "show": {
           "displayName": "Show Labels",
+          "displayNameKey": "Visual_Slice_ShowLabels",
           "type": { "bool": true }
         },
         "showPercentage": {
           "displayName": "Show Percentage",
+          "displayNameKey": "Visual_Slice_ShowPercentage",
           "type": { "bool": true }
         },
         "showValue": {
           "displayName": "Show Value",
+          "displayNameKey": "Visual_Slice_ShowValue",
           "type": { "bool": true }
         },
         "showTotal": {
           "displayName": "Show Total Above Bar",
+          "displayNameKey": "Visual_Slice_ShowTotal",
           "type": { "bool": true }
         },
         "fontSize": {
           "displayName": "Font Size",
+          "displayNameKey": "Visual_Slice_FontSize",
           "type": { "numeric": true }
         },
         "minSegmentHeight": {
           "displayName": "Min Segment Height (px)",
+          "displayNameKey": "Visual_Slice_MinSegmentHeight",
           "description": "Hide label when segment is smaller than this",
           "type": { "numeric": true }
         },
         "valueFormat": {
           "displayName": "Value Format",
+          "displayNameKey": "Visual_Slice_ValueFormat",
           "description": "short = 1.2M, full = 1,234,567",
           "type": {
             "enumeration": [
-              { "value": "short", "displayName": "Short (1.2M)" },
-              { "value": "full", "displayName": "Full (1,234,567)" }
+              { "value": "short", "displayName": "Short (1.2M)", "displayNameKey": "Visual_Enum_Short" },
+              { "value": "full", "displayName": "Full (1,234,567)", "displayNameKey": "Visual_Enum_Full" }
             ]
           }
         }
@@ -248,44 +255,52 @@
       "properties": {
         "show": {
           "displayName": "Show",
+          "displayNameKey": "Visual_Slice_Show",
           "type": { "bool": true }
         },
         "labelColor": {
           "displayName": "Label Color",
+          "displayNameKey": "Visual_Slice_LabelColor",
           "description": "Color of the growth percentage text",
           "type": { "fill": { "solid": { "color": true } } }
         },
         "lineColor": {
           "displayName": "Line Color",
+          "displayNameKey": "Visual_Slice_LineColor",
           "description": "Color of the connecting line between bars",
           "type": { "fill": { "solid": { "color": true } } }
         },
         "dotColor": {
           "displayName": "Dot Color",
+          "displayNameKey": "Visual_Slice_DotColor",
           "description": "Color of the endpoint dots",
           "type": { "fill": { "solid": { "color": true } } }
         },
         "fontSize": {
           "displayName": "Label Font Size",
+          "displayNameKey": "Visual_Slice_LabelFontSize",
           "type": { "numeric": true }
         },
         "lineStyle": {
           "displayName": "Line Style",
+          "displayNameKey": "Visual_Slice_LineStyle",
           "type": {
             "enumeration": [
-              { "value": "dashed", "displayName": "Dashed" },
-              { "value": "solid", "displayName": "Solid" },
-              { "value": "dotted", "displayName": "Dotted" }
+              { "value": "dashed", "displayName": "Dashed", "displayNameKey": "Visual_Enum_Dashed" },
+              { "value": "solid", "displayName": "Solid", "displayNameKey": "Visual_Enum_Solid" },
+              { "value": "dotted", "displayName": "Dotted", "displayNameKey": "Visual_Enum_Dotted" }
             ]
           }
         },
         "lineGap": {
           "displayName": "Gap Above Bars (px)",
+          "displayNameKey": "Visual_Slice_LineGap",
           "description": "Vertical spacing between bar totals and the connecting line",
           "type": { "numeric": true }
         },
         "showDots": {
           "displayName": "Show Endpoint Dots",
+          "displayNameKey": "Visual_Slice_ShowDots",
           "type": { "bool": true }
         }
       }
@@ -296,28 +311,43 @@
       "properties": {
         "show": {
           "displayName": "Show",
+          "displayNameKey": "Visual_Slice_Show",
           "type": { "bool": true }
         },
         "fontSize": {
           "displayName": "Font Size",
+          "displayNameKey": "Visual_Slice_FontSize",
           "type": { "numeric": true }
         },
         "position": {
           "displayName": "Position",
+          "displayNameKey": "Visual_Slice_Position",
           "type": {
             "enumeration": [
-              { "value": "TopCenter", "displayName": "Top Center" },
-              { "value": "TopLeft", "displayName": "Top Left" },
-              { "value": "TopRight", "displayName": "Top Right" },
-              { "value": "BottomLeft", "displayName": "Bottom Left" },
-              { "value": "BottomCenter", "displayName": "Bottom Center" },
-              { "value": "BottomRight", "displayName": "Bottom Right" }
+              { "value": "TopCenter", "displayName": "Top Center", "displayNameKey": "Visual_Enum_TopCenter" },
+              { "value": "TopLeft", "displayName": "Top Left", "displayNameKey": "Visual_Enum_TopLeft" },
+              { "value": "TopRight", "displayName": "Top Right", "displayNameKey": "Visual_Enum_TopRight" },
+              { "value": "BottomLeft", "displayName": "Bottom Left", "displayNameKey": "Visual_Enum_BottomLeft" },
+              { "value": "BottomCenter", "displayName": "Bottom Center", "displayNameKey": "Visual_Enum_BottomCenter" },
+              { "value": "BottomRight", "displayName": "Bottom Right", "displayNameKey": "Visual_Enum_BottomRight" }
             ]
           }
         },
         "title": {
           "displayName": "Title",
+          "displayNameKey": "Visual_Slice_Title",
           "type": { "text": true }
+        }
+      }
+    },
+    "tooltips": {
+      "displayName": "Tooltips",
+      "displayNameKey": "Visual_Object_Tooltips",
+      "properties": {
+        "show": {
+          "displayName": "Show",
+          "displayNameKey": "Visual_Slice_Show",
+          "type": { "bool": true }
         }
       }
     },
@@ -327,21 +357,23 @@
       "properties": {
         "yearOrder": {
           "displayName": "Sub-Category Order",
+          "displayNameKey": "Visual_Slice_YearOrder",
           "type": {
             "enumeration": [
-              { "value": "asc", "displayName": "Ascending (A → Z)" },
-              { "value": "desc", "displayName": "Descending (Z → A)" },
-              { "value": "data", "displayName": "Data Order" }
+              { "value": "asc", "displayName": "Ascending (A → Z)", "displayNameKey": "Visual_Enum_Ascending" },
+              { "value": "desc", "displayName": "Descending (Z → A)", "displayNameKey": "Visual_Enum_Descending" },
+              { "value": "data", "displayName": "Data Order", "displayNameKey": "Visual_Enum_DataOrder" }
             ]
           }
         },
         "stackOrder": {
           "displayName": "Stack Order",
+          "displayNameKey": "Visual_Slice_StackOrder",
           "type": {
             "enumeration": [
-              { "value": "data", "displayName": "Data Order" },
-              { "value": "asc", "displayName": "Ascending by Value" },
-              { "value": "desc", "displayName": "Descending by Value" }
+              { "value": "data", "displayName": "Data Order", "displayNameKey": "Visual_Enum_DataOrder" },
+              { "value": "asc", "displayName": "Ascending by Value", "displayNameKey": "Visual_Enum_AscendingByValue" },
+              { "value": "desc", "displayName": "Descending by Value", "displayNameKey": "Visual_Enum_DescendingByValue" }
             ]
           }
         }
@@ -351,16 +383,16 @@
       "displayName": "Stack Colors",
       "displayNameKey": "Visual_Object_ColorPalette",
       "properties": {
-        "color1": { "displayName": "Color 1", "type": { "fill": { "solid": { "color": true } } } },
-        "color2": { "displayName": "Color 2", "type": { "fill": { "solid": { "color": true } } } },
-        "color3": { "displayName": "Color 3", "type": { "fill": { "solid": { "color": true } } } },
-        "color4": { "displayName": "Color 4", "type": { "fill": { "solid": { "color": true } } } },
-        "color5": { "displayName": "Color 5", "type": { "fill": { "solid": { "color": true } } } },
-        "color6": { "displayName": "Color 6", "type": { "fill": { "solid": { "color": true } } } },
-        "color7": { "displayName": "Color 7", "type": { "fill": { "solid": { "color": true } } } },
-        "color8": { "displayName": "Color 8", "type": { "fill": { "solid": { "color": true } } } },
-        "color9": { "displayName": "Color 9", "type": { "fill": { "solid": { "color": true } } } },
-        "color10": { "displayName": "Color 10", "type": { "fill": { "solid": { "color": true } } } }
+        "color1": { "displayName": "Color 1", "displayNameKey": "Visual_Slice_Color1", "type": { "fill": { "solid": { "color": true } } } },
+        "color2": { "displayName": "Color 2", "displayNameKey": "Visual_Slice_Color2", "type": { "fill": { "solid": { "color": true } } } },
+        "color3": { "displayName": "Color 3", "displayNameKey": "Visual_Slice_Color3", "type": { "fill": { "solid": { "color": true } } } },
+        "color4": { "displayName": "Color 4", "displayNameKey": "Visual_Slice_Color4", "type": { "fill": { "solid": { "color": true } } } },
+        "color5": { "displayName": "Color 5", "displayNameKey": "Visual_Slice_Color5", "type": { "fill": { "solid": { "color": true } } } },
+        "color6": { "displayName": "Color 6", "displayNameKey": "Visual_Slice_Color6", "type": { "fill": { "solid": { "color": true } } } },
+        "color7": { "displayName": "Color 7", "displayNameKey": "Visual_Slice_Color7", "type": { "fill": { "solid": { "color": true } } } },
+        "color8": { "displayName": "Color 8", "displayNameKey": "Visual_Slice_Color8", "type": { "fill": { "solid": { "color": true } } } },
+        "color9": { "displayName": "Color 9", "displayNameKey": "Visual_Slice_Color9", "type": { "fill": { "solid": { "color": true } } } },
+        "color10": { "displayName": "Color 10", "displayNameKey": "Visual_Slice_Color10", "type": { "fill": { "solid": { "color": true } } } }
       }
     }
   },

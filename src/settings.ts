@@ -160,27 +160,28 @@ export class YAxisCard extends formattingSettings.CompositeCard {
 export class DataLabelsCard extends formattingSettings.SimpleCard {
   name = "dataLabels";
   displayName = "Data Labels";
+  displayNameKey = "Visual_Object_DataLabels";
 
   show = new formattingSettings.ToggleSwitch({
-    name: "show", displayName: "Show Labels", value: true,
+    name: "show", displayName: "Show Labels", displayNameKey: "Visual_Slice_ShowLabels", value: true,
   } as formattingSettings.ToggleSwitch);
   showPercentage = new formattingSettings.ToggleSwitch({
-    name: "showPercentage", displayName: "Show Percentage", value: true,
+    name: "showPercentage", displayName: "Show Percentage", displayNameKey: "Visual_Slice_ShowPercentage", value: true,
   } as formattingSettings.ToggleSwitch);
   showValue = new formattingSettings.ToggleSwitch({
-    name: "showValue", displayName: "Show Value", value: true,
+    name: "showValue", displayName: "Show Value", displayNameKey: "Visual_Slice_ShowValue", value: true,
   } as formattingSettings.ToggleSwitch);
   showTotal = new formattingSettings.ToggleSwitch({
-    name: "showTotal", displayName: "Show Total Above Bar", value: true,
+    name: "showTotal", displayName: "Show Total Above Bar", displayNameKey: "Visual_Slice_ShowTotal", value: true,
   } as formattingSettings.ToggleSwitch);
   fontSize = new formattingSettings.NumUpDown({
-    name: "fontSize", displayName: "Font Size", value: 10,
+    name: "fontSize", displayName: "Font Size", displayNameKey: "Visual_Slice_FontSize", value: 10,
   } as formattingSettings.NumUpDown);
   minSegmentHeight = new formattingSettings.NumUpDown({
-    name: "minSegmentHeight", displayName: "Min Segment Height (px)", value: 18,
+    name: "minSegmentHeight", displayName: "Min Segment Height (px)", displayNameKey: "Visual_Slice_MinSegmentHeight", value: 18,
   } as formattingSettings.NumUpDown);
   valueFormat = new formattingSettings.AutoDropdown({
-    name: "valueFormat", displayName: "Value Format", value: "full",
+    name: "valueFormat", displayName: "Value Format", displayNameKey: "Visual_Slice_ValueFormat", value: "full",
   } as formattingSettings.AutoDropdown);
 
   slices = [this.show, this.showPercentage, this.showValue, this.showTotal, this.fontSize, this.minSegmentHeight, this.valueFormat];
@@ -193,30 +194,31 @@ export class DataLabelsCard extends formattingSettings.SimpleCard {
 export class GrowthAnnotationCard extends formattingSettings.SimpleCard {
   name = "growthAnnotation";
   displayName = "Growth Annotation";
+  displayNameKey = "Visual_Object_GrowthAnnotation";
 
   show = new formattingSettings.ToggleSwitch({
-    name: "show", displayName: "Show", value: true,
+    name: "show", displayName: "Show", displayNameKey: "Visual_Slice_Show", value: true,
   } as formattingSettings.ToggleSwitch);
   labelColor = new formattingSettings.ColorPicker({
-    name: "labelColor", displayName: "Label Color", value: { value: "#E8800A" },
+    name: "labelColor", displayName: "Label Color", displayNameKey: "Visual_Slice_LabelColor", value: { value: "#E8800A" },
   } as formattingSettings.ColorPicker);
   lineColor = new formattingSettings.ColorPicker({
-    name: "lineColor", displayName: "Line Color", value: { value: "#E8800A" },
+    name: "lineColor", displayName: "Line Color", displayNameKey: "Visual_Slice_LineColor", value: { value: "#E8800A" },
   } as formattingSettings.ColorPicker);
   dotColor = new formattingSettings.ColorPicker({
-    name: "dotColor", displayName: "Dot Color", value: { value: "#E8800A" },
+    name: "dotColor", displayName: "Dot Color", displayNameKey: "Visual_Slice_DotColor", value: { value: "#E8800A" },
   } as formattingSettings.ColorPicker);
   fontSize = new formattingSettings.NumUpDown({
-    name: "fontSize", displayName: "Label Font Size", value: 14,
+    name: "fontSize", displayName: "Label Font Size", displayNameKey: "Visual_Slice_LabelFontSize", value: 14,
   } as formattingSettings.NumUpDown);
   lineStyle = new formattingSettings.AutoDropdown({
-    name: "lineStyle", displayName: "Line Style", value: "dashed",
+    name: "lineStyle", displayName: "Line Style", displayNameKey: "Visual_Slice_LineStyle", value: "dashed",
   } as formattingSettings.AutoDropdown);
   lineGap = new formattingSettings.NumUpDown({
-    name: "lineGap", displayName: "Gap Above Bars (px)", value: 28,
+    name: "lineGap", displayName: "Gap Above Bars (px)", displayNameKey: "Visual_Slice_LineGap", value: 28,
   } as formattingSettings.NumUpDown);
   showDots = new formattingSettings.ToggleSwitch({
-    name: "showDots", displayName: "Show Endpoint Dots", value: true,
+    name: "showDots", displayName: "Show Endpoint Dots", displayNameKey: "Visual_Slice_ShowDots", value: true,
   } as formattingSettings.ToggleSwitch);
 
   slices = [this.show, this.labelColor, this.lineColor, this.dotColor, this.fontSize, this.lineStyle, this.lineGap, this.showDots];
@@ -229,18 +231,19 @@ export class GrowthAnnotationCard extends formattingSettings.SimpleCard {
 export class LegendCard extends formattingSettings.SimpleCard {
   name = "legend";
   displayName = "Legend";
+  displayNameKey = "Visual_Object_Legend";
 
   show = new formattingSettings.ToggleSwitch({
-    name: "show", displayName: "Show", value: true,
+    name: "show", displayName: "Show", displayNameKey: "Visual_Slice_Show", value: true,
   } as formattingSettings.ToggleSwitch);
   position = new formattingSettings.AutoDropdown({
-    name: "position", displayName: "Position", value: "TopCenter",
+    name: "position", displayName: "Position", displayNameKey: "Visual_Slice_Position", value: "TopCenter",
   } as formattingSettings.AutoDropdown);
   fontSize = new formattingSettings.NumUpDown({
-    name: "fontSize", displayName: "Font Size", value: 11,
+    name: "fontSize", displayName: "Font Size", displayNameKey: "Visual_Slice_FontSize", value: 11,
   } as formattingSettings.NumUpDown);
   title = new formattingSettings.TextInput({
-    name: "title", displayName: "Title", value: "", placeholder: "",
+    name: "title", displayName: "Title", displayNameKey: "Visual_Slice_Title", value: "", placeholder: "",
   } as formattingSettings.TextInput);
 
   slices = [this.show, this.position, this.fontSize, this.title];
@@ -253,15 +256,32 @@ export class LegendCard extends formattingSettings.SimpleCard {
 export class SortSettingsCard extends formattingSettings.SimpleCard {
   name = "sortSettings";
   displayName = "Sort Order";
+  displayNameKey = "Visual_Object_SortSettings";
 
   yearOrder = new formattingSettings.AutoDropdown({
-    name: "yearOrder", displayName: "Sub-Category Order", value: "asc",
+    name: "yearOrder", displayName: "Sub-Category Order", displayNameKey: "Visual_Slice_YearOrder", value: "asc",
   } as formattingSettings.AutoDropdown);
   stackOrder = new formattingSettings.AutoDropdown({
-    name: "stackOrder", displayName: "Stack Order", value: "data",
+    name: "stackOrder", displayName: "Stack Order", displayNameKey: "Visual_Slice_StackOrder", value: "data",
   } as formattingSettings.AutoDropdown);
 
   slices = [this.yearOrder, this.stackOrder];
+}
+
+/* ================================================================== */
+/*  Card: Tooltips                                                      */
+/* ================================================================== */
+
+export class TooltipsCard extends formattingSettings.SimpleCard {
+  name = "tooltips";
+  displayName = "Tooltips";
+  displayNameKey = "Visual_Object_Tooltips";
+
+  show = new formattingSettings.ToggleSwitch({
+    name: "show", displayName: "Show", displayNameKey: "Visual_Slice_Show", value: true,
+  } as formattingSettings.ToggleSwitch);
+
+  slices = [this.show];
 }
 
 /* ================================================================== */
@@ -276,17 +296,18 @@ const PALETTE_DEFAULTS = [
 export class ColorPaletteCard extends formattingSettings.SimpleCard {
   name = "colorPalette";
   displayName = "Stack Colors";
+  displayNameKey = "Visual_Object_ColorPalette";
 
-  color1  = new formattingSettings.ColorPicker({ name: "color1",  displayName: "Color 1",  value: { value: PALETTE_DEFAULTS[0] } } as formattingSettings.ColorPicker);
-  color2  = new formattingSettings.ColorPicker({ name: "color2",  displayName: "Color 2",  value: { value: PALETTE_DEFAULTS[1] } } as formattingSettings.ColorPicker);
-  color3  = new formattingSettings.ColorPicker({ name: "color3",  displayName: "Color 3",  value: { value: PALETTE_DEFAULTS[2] } } as formattingSettings.ColorPicker);
-  color4  = new formattingSettings.ColorPicker({ name: "color4",  displayName: "Color 4",  value: { value: PALETTE_DEFAULTS[3] } } as formattingSettings.ColorPicker);
-  color5  = new formattingSettings.ColorPicker({ name: "color5",  displayName: "Color 5",  value: { value: PALETTE_DEFAULTS[4] } } as formattingSettings.ColorPicker);
-  color6  = new formattingSettings.ColorPicker({ name: "color6",  displayName: "Color 6",  value: { value: PALETTE_DEFAULTS[5] } } as formattingSettings.ColorPicker);
-  color7  = new formattingSettings.ColorPicker({ name: "color7",  displayName: "Color 7",  value: { value: PALETTE_DEFAULTS[6] } } as formattingSettings.ColorPicker);
-  color8  = new formattingSettings.ColorPicker({ name: "color8",  displayName: "Color 8",  value: { value: PALETTE_DEFAULTS[7] } } as formattingSettings.ColorPicker);
-  color9  = new formattingSettings.ColorPicker({ name: "color9",  displayName: "Color 9",  value: { value: PALETTE_DEFAULTS[8] } } as formattingSettings.ColorPicker);
-  color10 = new formattingSettings.ColorPicker({ name: "color10", displayName: "Color 10", value: { value: PALETTE_DEFAULTS[9] } } as formattingSettings.ColorPicker);
+  color1  = new formattingSettings.ColorPicker({ name: "color1",  displayName: "Color 1",  displayNameKey: "Visual_Slice_Color1",  value: { value: PALETTE_DEFAULTS[0] } } as formattingSettings.ColorPicker);
+  color2  = new formattingSettings.ColorPicker({ name: "color2",  displayName: "Color 2",  displayNameKey: "Visual_Slice_Color2",  value: { value: PALETTE_DEFAULTS[1] } } as formattingSettings.ColorPicker);
+  color3  = new formattingSettings.ColorPicker({ name: "color3",  displayName: "Color 3",  displayNameKey: "Visual_Slice_Color3",  value: { value: PALETTE_DEFAULTS[2] } } as formattingSettings.ColorPicker);
+  color4  = new formattingSettings.ColorPicker({ name: "color4",  displayName: "Color 4",  displayNameKey: "Visual_Slice_Color4",  value: { value: PALETTE_DEFAULTS[3] } } as formattingSettings.ColorPicker);
+  color5  = new formattingSettings.ColorPicker({ name: "color5",  displayName: "Color 5",  displayNameKey: "Visual_Slice_Color5",  value: { value: PALETTE_DEFAULTS[4] } } as formattingSettings.ColorPicker);
+  color6  = new formattingSettings.ColorPicker({ name: "color6",  displayName: "Color 6",  displayNameKey: "Visual_Slice_Color6",  value: { value: PALETTE_DEFAULTS[5] } } as formattingSettings.ColorPicker);
+  color7  = new formattingSettings.ColorPicker({ name: "color7",  displayName: "Color 7",  displayNameKey: "Visual_Slice_Color7",  value: { value: PALETTE_DEFAULTS[6] } } as formattingSettings.ColorPicker);
+  color8  = new formattingSettings.ColorPicker({ name: "color8",  displayName: "Color 8",  displayNameKey: "Visual_Slice_Color8",  value: { value: PALETTE_DEFAULTS[7] } } as formattingSettings.ColorPicker);
+  color9  = new formattingSettings.ColorPicker({ name: "color9",  displayName: "Color 9",  displayNameKey: "Visual_Slice_Color9",  value: { value: PALETTE_DEFAULTS[8] } } as formattingSettings.ColorPicker);
+  color10 = new formattingSettings.ColorPicker({ name: "color10", displayName: "Color 10", displayNameKey: "Visual_Slice_Color10", value: { value: PALETTE_DEFAULTS[9] } } as formattingSettings.ColorPicker);
 
   slices = [this.color1, this.color2, this.color3, this.color4, this.color5, this.color6, this.color7, this.color8, this.color9, this.color10];
 }
@@ -301,6 +322,7 @@ export class VisualFormattingSettingsModel extends formattingSettings.Model {
   dataLabelsCard = new DataLabelsCard();
   growthAnnotationCard = new GrowthAnnotationCard();
   legendCard = new LegendCard();
+  tooltipsCard = new TooltipsCard();
   sortSettingsCard = new SortSettingsCard();
   colorPaletteCard = new ColorPaletteCard();
 
@@ -310,6 +332,7 @@ export class VisualFormattingSettingsModel extends formattingSettings.Model {
     this.dataLabelsCard,
     this.growthAnnotationCard,
     this.legendCard,
+    this.tooltipsCard,
     this.sortSettingsCard,
     this.colorPaletteCard,
   ];

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.0.0 — 2026-08-05
+
+### Added
+
+- Tooltips settings card (show toggle) — tooltips can now be switched off from the format pane
+
+### Changed
+
+- Format pane fully localized: every card, group, slice and dropdown item now resolves through string resources — zh-CN displays all-Chinese names, en-US stays English (no more mixed language UI)
+- FormattingSettingsService is now constructed with the visual's localization manager so displayNameKeys take effect
+
 ## 1.2.0.0 — 2026-08-05
 
 Format pane restructured to follow the native Power BI axis settings (per standard chart spec).

@@ -175,14 +175,14 @@ export class Visual implements IVisual {
     this.svg = this.root.append("svg");
 
     // Modern API services
-    this.formattingSettingsService = new FormattingSettingsService();
+    this.localizationManager = this.host.createLocalizationManager();
+    this.formattingSettingsService = new FormattingSettingsService(this.localizationManager);
     this.formattingModel = new VisualFormattingSettingsModel();
     this.colorHelper = new ColorHelper(this.host.colorPalette);
     this.events = options.host.eventService;
 
-    // Selection & localization
+    // Selection
     this.selectionManager = this.host.createSelectionManager();
-    this.localizationManager = this.host.createLocalizationManager();
     this.allowInteractions = this.host.hostCapabilities?.allowInteractions ?? true;
 
     // Click on an empty plot area clears the selection
@@ -517,6 +517,9 @@ export class Visual implements IVisual {
     const lgPosition = dd(lgC, "position", "TopCenter");
     const lgTitle = txt(lgC, "title", "");
 
+    const ttC = m.tooltipsCard as unknown as Record<string, unknown>;
+    const ttShow = bool(ttC, "show", true);
+
     // Build palette from color settings
     const palette: string[] = [];
     for (let i = 1; i <= 10; i++) {
@@ -727,16 +730,18 @@ export class Visual implements IVisual {
             .on("keydown", (event: KeyboardEvent) => this.onSegmentKeyDown(event, seg));
 
           // Tooltip
-          tooltipSvc.addTooltip(
-            d3.select(rect.node()),
-            () => [
-              { displayName: `${ga.group} / ${yr}`, value: "" },
-              { displayName: loc, value: plainFmt.format(seg.value) },
-              { displayName: totalLabel, value: plainFmt.format(bar.total) },
-              { displayName: shareLabel, value: bar.total !== 0 ? `${(seg.value / bar.total * 100).toFixed(1)}%` : "" },
-            ],
-            () => null
-          );
+          if (ttShow) {
+            tooltipSvc.addTooltip(
+              d3.select(rect.node()),
+              () => [
+                { displayName: `${ga.group} / ${yr}`, value: "" },
+                { displayName: loc, value: plainFmt.format(seg.value) },
+                { displayName: totalLabel, value: plainFmt.format(bar.total) },
+                { displayName: shareLabel, value: bar.total !== 0 ? `${(seg.value / bar.total * 100).toFixed(1)}%` : "" },
+              ],
+              () => null
+            );
+          }
 
           // Segment labels
           if (dlShow && segH >= dlMinHeight) {
